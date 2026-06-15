@@ -1,6 +1,7 @@
 package org.example.rules.impl;
 
 import org.example.enums.Severity;
+import org.example.model.Column;
 import org.example.model.Finding;
 import org.example.model.ForeignKey;
 import org.example.model.SchemaSnapshot;
@@ -8,6 +9,7 @@ import org.example.model.Table;
 import org.example.rules.AnalysisContext;
 import org.example.rules.Rule;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class R03_NullableRiskRule implements Rule {
@@ -18,8 +20,26 @@ public class R03_NullableRiskRule implements Rule {
     public List<Finding> analyze(AnalysisContext context) {
         SchemaSnapshot snapshot = context.snapshot();
         List<Table> tables = snapshot.tables();
-        for(Table table : tables) {
+
+        List<Finding> findings = new ArrayList<>();
+        for (Table table : tables) {
             List<ForeignKey> foreignKeys = table.foreignKeys();
+            for (ForeignKey foreignKey : foreignKeys) {
+                table.columns().stream()
+                        .filter(column -> column.name().equals(foreignKey.column()))
+                        .filter(Column::nullable)
+                        .findFirst()
+                        .ifPresent(column -> findings.add(new Finding(
+                                ID,
+                                SEVERITY,
+                                "Foreign key column allows null values",
+                                "Make the column NOT NULL when the relationship is required",
+                                table.name(),
+                                column.name()
+                        )));
+            }
         }
+
+        return findings;
     }
 }
