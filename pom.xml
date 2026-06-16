@@ -24,6 +24,8 @@
         <junit.platform.version>1.12.2</junit.platform.version>
         <testcontainers.version>1.21.3</testcontainers.version>
         <slf4j.version>2.0.16</slf4j.version>
+        <jackson.version>2.21.3</jackson.version>
+        <datasource-proxy.version>1.11.0</datasource-proxy.version>
     </properties>
 
     <dependencyManagement>
@@ -75,6 +77,18 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-simple</artifactId>
                 <version>${slf4j.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>net.ttddyy</groupId>
+                <artifactId>datasource-proxy</artifactId>
+                <version>${datasource-proxy.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

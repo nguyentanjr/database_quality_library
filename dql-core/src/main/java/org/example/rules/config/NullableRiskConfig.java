@@ -11,8 +11,8 @@ public record NullableRiskConfig(
     public static NullableRiskConfig defaults() {
         return new NullableRiskConfig(
                 Map.of(
-                        Severity.MEDIUM, List.of("email", "username", "status", "code"),
-                        Severity.LOW, List.of("created_at", "updated_at")
+                        Severity.MEDIUM, List.of("email", "username", "status", "code")
+                       // Severity.LOW, List.of("created_at", "updated_at")
                 )
         );
     }
