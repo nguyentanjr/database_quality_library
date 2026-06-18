@@ -1,21 +1,77 @@
 package org.example;
 
-
+import org.example.analyzer.RuleEngine;
 import org.example.collector.SchemaCollector;
+import org.example.model.Finding;
 import org.example.model.SchemaSnapshot;
-import org.postgresql.ds.PGSimpleDataSource;
+import org.example.report.JsonReporter;
+import org.example.rules.AnalysisContext;
+import org.example.rules.impl.R01_MissingPrimaryKeyRule;
+import org.example.rules.impl.R02_SuspiciousTypeRule;
+import org.example.rules.impl.R03_NullableRiskRule;
+import org.example.storage.ExecutionSink;
+import org.example.storage.InMemoryExecutionSink;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.util.List;
 import java.util.TimeZone;
 
-public class Main {
-    public static void main(String[] args) throws Exception {
-        TimeZone.setDefault(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
-        PGSimpleDataSource ds = new PGSimpleDataSource();
-        ds.setUrl("jdbc:postgresql://localhost:5432/dqldemo");
-        ds.setUser("dql");
-        ds.setPassword("dql");
+@SpringBootApplication
+public class Main implements CommandLineRunner {
+    private final DataSource dataSource;
+    private final ExecutionSink executionSink;
 
-        SchemaSnapshot snap = new SchemaCollector().collect(ds);
-        snap.tables().forEach(System.out::println);  // record toString in đủ field
+    public Main(DataSource dataSource, ExecutionSink executionSink) {
+        this.dataSource = dataSource;
+        this.executionSink = executionSink;
+    }
+
+    public static void main(String[] args) {
+        TimeZone.setDefault(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
+        SpringApplication.run(Main.class, args);
+    }
+
+    @Override
+    public void run(String... args) throws Exception {
+        runRealQuery("SELECT * FROM accounts WHERE id = 1");
+        runRealQuery("SELECT * FROM accounts WHERE id = 2");
+        runRealQuery("SELECT * FROM accounts WHERE id = 999");
+        runRealQuery("SELECT * FROM transactions WHERE id = 1");
+        runRealQuery("""
+    SELECT * FROM transactions t
+    JOIN accounts a ON t.account_id = a.id
+    WHERE t.amount > 5
+""");
+        SchemaSnapshot snapshot = new SchemaCollector().collect(dataSource);
+        AnalysisContext ctx = new AnalysisContext(snapshot);
+        RuleEngine engine = new RuleEngine(List.of(
+                new R01_MissingPrimaryKeyRule(),
+                new R02_SuspiciousTypeRule(),
+                new R03_NullableRiskRule()
+        ));
+
+        executionSink.stats().forEach(System.out::println);
+
+        List<Finding> findings = engine.run(ctx);
+        findings.forEach(System.out::println);
+
+        JsonReporter reporter = new JsonReporter();
+        System.out.println(reporter.report(findings, snapshot.tables().size()));
+    }
+
+    private void runRealQuery(String sql) throws Exception {
+        try (Connection connection = dataSource.getConnection();
+             Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery(sql)) {
+            if (resultSet.next()) {
+                System.out.println("accounts_count=" + resultSet.getLong(1));
+            }
+        }
     }
 }
