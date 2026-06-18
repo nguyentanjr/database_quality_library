@@ -27,6 +27,7 @@
         <slf4j.version>2.0.16</slf4j.version>
         <jackson.version>2.21.3</jackson.version>
         <datasource-proxy.version>1.11.0</datasource-proxy.version>
+        <jsqlparser.version>5.3</jsqlparser.version>
         <spring-boot.version>4.1.0</spring-boot.version>
     </properties>
 
@@ -41,6 +42,12 @@
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>dql-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>dql-spring-boot-starter</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
@@ -100,8 +107,20 @@
             </dependency>
 
             <dependency>
+                <groupId>com.github.jsqlparser</groupId>
+                <artifactId>jsqlparser</artifactId>
+                <version>${jsqlparser.version}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-autoconfigure</artifactId>
+                <version>${spring-boot.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-starter-jdbc</artifactId>
                 <version>${spring-boot.version}</version>
             </dependency>
         </dependencies>
