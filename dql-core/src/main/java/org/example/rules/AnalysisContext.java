@@ -1,6 +1,13 @@
 package org.example.rules;
 
+import org.example.model.QueryExecution;
+import org.example.model.QueryStats;
 import org.example.model.SchemaSnapshot;
 
-public record AnalysisContext(SchemaSnapshot snapshot) {
-}
+import java.util.List;
+
+public record AnalysisContext(
+        SchemaSnapshot snapshot,
+        List<QueryStats> queryStats,
+        List<QueryExecution> executions
+) {}
