@@ -50,7 +50,8 @@ public class R03_NullableRiskRule implements Rule {
                             "Foreign key column is nullable",
                             "Make foreign key column NOT NULL if the relationship is required",
                             table.name(),
-                            column.name()
+                            column.name(),
+                            null
                     ));
                 }
                 else if(configSeverity != null) {
@@ -60,7 +61,8 @@ public class R03_NullableRiskRule implements Rule {
                             "Important column is nullable",
                             "Consider adding NOT NULL if this column is required by business logic",
                             table.name(),
-                            column.name()
+                            column.name(),
+                            null
                     ));
                 }
 

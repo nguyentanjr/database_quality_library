@@ -28,6 +28,7 @@ public final class R01_MissingPrimaryKeyRule implements Rule {
                         "Table has no primary key",
                         "Add a primary key to the table",
                         table.name(),
+                        null,
                         null));
             }
         }

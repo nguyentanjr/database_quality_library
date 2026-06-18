@@ -42,7 +42,8 @@ public class R02_SuspiciousTypeRule implements Rule {
                             "Monetary column uses floating-point type",
                             "Use NUMERIC or DECIMAL for monetary values",
                             table.name(),
-                            column.name()
+                            column.name(),
+                            null
                     ));
                 }
 
@@ -64,7 +65,8 @@ public class R02_SuspiciousTypeRule implements Rule {
                             "Temporal column uses string type",
                             "Use TIMESTAMP, DATE, or TIME instead",
                             table.name(),
-                            column.name()
+                            column.name(),
+                            null
                     ));
                 }
             }

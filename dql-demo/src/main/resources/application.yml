@@ -1,6 +1,7 @@
 dql:
   enabled: true
-
+  slow-queries:
+    threshold-ms: 1000
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/dqldemo
