@@ -1,5 +1,9 @@
+dql:
+  enabled: true
+
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/dqldemo
     username: dql
     password: dql
+    driver-class-name: org.postgresql.Driver
