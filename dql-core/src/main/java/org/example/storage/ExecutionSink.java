@@ -11,4 +11,6 @@ public interface ExecutionSink {
 
     List<QueryStats> stats();
 
+    List<QueryExecution> recentExecutions();
+
 }

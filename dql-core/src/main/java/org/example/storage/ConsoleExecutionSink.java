@@ -19,4 +19,9 @@ public class ConsoleExecutionSink implements ExecutionSink{
     public List<QueryStats> stats() {
         return List.of();
     }
+
+    @Override
+    public List<QueryExecution> recentExecutions() {
+        return List.of();
+    }
 }

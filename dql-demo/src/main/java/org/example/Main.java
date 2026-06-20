@@ -6,9 +6,9 @@ import org.example.model.Finding;
 import org.example.model.SchemaSnapshot;
 import org.example.report.JsonReporter;
 import org.example.rules.AnalysisContext;
-import org.example.rules.impl.R01_MissingPrimaryKeyRule;
-import org.example.rules.impl.R02_SuspiciousTypeRule;
-import org.example.rules.impl.R03_NullableRiskRule;
+import org.example.rules.config.MissingIndexConfig;
+import org.example.rules.config.SlowQueryConfig;
+import org.example.rules.impl.*;
 import org.example.storage.ExecutionSink;
 import org.example.storage.InMemoryExecutionSink;
 import org.springframework.boot.CommandLineRunner;
@@ -49,11 +49,16 @@ public class Main implements CommandLineRunner {
     WHERE t.amount > 5
 """);
         SchemaSnapshot snapshot = new SchemaCollector().collect(dataSource);
-        AnalysisContext ctx = new AnalysisContext(snapshot);
+        AnalysisContext ctx = new AnalysisContext(snapshot, executionSink.stats(), executionSink.recentExecutions());
         RuleEngine engine = new RuleEngine(List.of(
                 new R01_MissingPrimaryKeyRule(),
                 new R02_SuspiciousTypeRule(),
-                new R03_NullableRiskRule()
+                new R03_NullableRiskRule(),
+                new R04_SelectStarRule(),
+                new R05_SlowQueryRule(SlowQueryConfig.defaults()),
+                new R06_UnindexedFKRule(),
+                new R07_MissingIndexRule(MissingIndexConfig.defaults()),
+                new R08_UnusedIndexRule()
         ));
 
         executionSink.stats().forEach(System.out::println);
