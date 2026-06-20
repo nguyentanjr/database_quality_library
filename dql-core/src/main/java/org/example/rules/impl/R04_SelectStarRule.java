@@ -15,7 +15,7 @@ public class R04_SelectStarRule implements Rule {
 
     public static final String ID = "R04_SelectStar";
 
-    public static final Severity SEVERITY = Severity.HIGH;
+    public static final Severity SEVERITY = Severity.LOW ;
 
     private static final Pattern SELECT_STAR_PATTERN =
             Pattern.compile("^select\\s+\\*\\s+from\\b");

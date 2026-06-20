@@ -14,7 +14,7 @@ public class R06_UnindexedFKRule implements Rule {
 
     public static final String ID = "R06_UnindexedFK";
 
-    public static final Severity SEVERITY = Severity.HIGH;
+    public static final Severity SEVERITY = Severity.MEDIUM;
 
 
     @Override

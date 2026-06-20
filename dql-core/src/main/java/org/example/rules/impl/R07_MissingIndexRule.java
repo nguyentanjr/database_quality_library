@@ -5,9 +5,6 @@ import org.example.model.*;
 import org.example.rules.AnalysisContext;
 import org.example.rules.Rule;
 import org.example.rules.config.MissingIndexConfig;
-import org.example.rules.config.SlowQueryConfig;
-import org.example.storage.ExecutionSink;
-import org.example.storage.InMemoryExecutionSink;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,9 +12,9 @@ import java.util.Set;
 
 public class R07_MissingIndexRule implements Rule {
 
-    public static final String ID = "R07_UnindexedFK";
+    public static final String ID = "R07_MissingIndex";
 
-    public static final Severity SEVERITY = Severity.HIGH;
+    public static final Severity SEVERITY = Severity.MEDIUM;
 
     private final MissingIndexConfig config;
 
@@ -36,6 +33,11 @@ public class R07_MissingIndexRule implements Rule {
             Set<String> leadingIndices = RuleHelper.leadingIndices(indices);
             for (QueryStats stats : queryStats) {
                 if (stats.count() < config.thresholdCount()) {
+                    continue;
+                }
+
+                //TODO:
+                if(stats.tables().size() > 1) {
                     continue;
                 }
 

@@ -14,7 +14,7 @@ public class R08_UnusedIndexRule implements Rule {
 
     public static final String ID = "R08_UnusedIndex";
 
-    public static final Severity SEVERITY = Severity.MEDIUM;
+    public static final Severity SEVERITY = Severity.LOW;
 
     @Override
     public List<Finding> analyze(AnalysisContext context) {
@@ -25,7 +25,6 @@ public class R08_UnusedIndexRule implements Rule {
 
         for (Table table : snapshot.tables()) {
             Set<String> usedColumns = usedColumnsOfTable(table.name(), queryStats);
-
             for (Index index : table.indexes()) {
                 List<String> indexColumns = index.indexColumns();
 
@@ -33,7 +32,11 @@ public class R08_UnusedIndexRule implements Rule {
                     continue;
                 }
 
-                String leadingColumn = indexColumns.get(0);
+                String leadingColumn = indexColumns.getFirst();
+
+                if (table.primaryKey().contains(leadingColumn) || index.unique()) {
+                    continue;
+                }
 
                 if (usedColumns.contains(leadingColumn)) {
                     continue;

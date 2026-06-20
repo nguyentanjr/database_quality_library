@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 
 public class R03_NullableRiskRule implements Rule {
     public static final String ID = "R03_NullableRisk";
-    public static final Severity SEVERITY = Severity.HIGH;
+    public static final Severity SEVERITY = Severity.MEDIUM;
 
     private final NullableRiskConfig config;
 
