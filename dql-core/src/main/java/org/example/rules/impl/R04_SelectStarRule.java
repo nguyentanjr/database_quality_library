@@ -8,6 +8,7 @@ import org.example.rules.Rule;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 public class R04_SelectStarRule implements Rule {
@@ -36,7 +37,8 @@ public class R04_SelectStarRule implements Rule {
                         "Avoid SELECT *; explicitly list required columns",
                         null,
                         null,
-                        fingerprint
+                        fingerprint,
+                        Map.of()
                 ));
             }
         }

@@ -51,7 +51,8 @@ public class R03_NullableRiskRule implements Rule {
                             "Make foreign key column NOT NULL if the relationship is required",
                             table.name(),
                             column.name(),
-                            null
+                            null,
+                            Map.of()
                     ));
                 }
                 else if(configSeverity != null) {
@@ -62,7 +63,8 @@ public class R03_NullableRiskRule implements Rule {
                             "Consider adding NOT NULL if this column is required by business logic",
                             table.name(),
                             column.name(),
-                            null
+                            null,
+                            Map.of()
                     ));
                 }
 

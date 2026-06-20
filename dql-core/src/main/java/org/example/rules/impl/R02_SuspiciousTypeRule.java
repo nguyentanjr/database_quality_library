@@ -9,6 +9,7 @@ import org.example.rules.Rule;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class R02_SuspiciousTypeRule implements Rule {
 
@@ -43,7 +44,8 @@ public class R02_SuspiciousTypeRule implements Rule {
                             "Use NUMERIC or DECIMAL for monetary values",
                             table.name(),
                             column.name(),
-                            null
+                            null,
+                            Map.of()
                     ));
                 }
 
@@ -66,7 +68,8 @@ public class R02_SuspiciousTypeRule implements Rule {
                             "Use TIMESTAMP, DATE, or TIME instead",
                             table.name(),
                             column.name(),
-                            null
+                            null,
+                            Map.of()
                     ));
                 }
             }

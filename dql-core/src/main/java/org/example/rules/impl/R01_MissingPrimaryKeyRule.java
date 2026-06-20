@@ -8,6 +8,7 @@ import org.example.rules.Rule;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public final class R01_MissingPrimaryKeyRule implements Rule {
 
@@ -29,7 +30,8 @@ public final class R01_MissingPrimaryKeyRule implements Rule {
                         "Add a primary key to the table",
                         table.name(),
                         null,
-                        null));
+                        null,
+                        Map.of()));
             }
         }
         return findings;

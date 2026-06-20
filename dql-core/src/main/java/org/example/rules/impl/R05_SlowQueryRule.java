@@ -14,7 +14,7 @@ import java.util.Map;
 
 public class R05_SlowQueryRule implements Rule {
 
-    public static final String ID = "R05_SlowQueryRule";
+    public static final String ID = "R05_SlowQuery";
 
     public static final Severity SEVERITY = Severity.HIGH;
 
@@ -44,12 +44,18 @@ public class R05_SlowQueryRule implements Rule {
         for (SlowQueryAccumulator acc : slowQueries.values()) {
 
             findings.add(new Finding(
-                    ID, SEVERITY,
+                    ID,
+                    SEVERITY,
                     "Slow query",
-                    "Query exceeded " + threshold + "ms",  //
+                    "Query exceeded " + threshold + "ms",
                     null,
                     null,
-                    acc.getFingerprint()));
+                    acc.getFingerprint(),
+                    Map.of(
+                            "thresholdMs", threshold,
+                            "slowCount", acc.getSlowCount(),
+                            "maxDurationMs", acc.getMaxDurationMs()
+                    )));
         }
         return findings;
 
