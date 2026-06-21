@@ -32,8 +32,8 @@ public class DqlAutoConfiguration {
     }
 
     @Bean
-    public static DqlBeanPostProcessor dqlBeanPostProcessor(ObjectProvider<ExecutionSink> sinks) {
-        return new DqlBeanPostProcessor(sinks);
+    public static DqlBeanPostProcessor dqlBeanPostProcessor(ObjectProvider<ExecutionSink> sinks, Fingerprinter fingerprinter) {
+        return new DqlBeanPostProcessor(sinks, fingerprinter);
     }
 
     @Bean
