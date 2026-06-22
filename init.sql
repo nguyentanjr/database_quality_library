@@ -36,3 +36,24 @@ CREATE TABLE transaction_log (   -- R01: không có PRIMARY KEY
                                  txn_id BIGINT,
                                  note TEXT
 );
+
+INSERT INTO accounts (id, email, balance)
+VALUES
+    (1, 'alice@example.com', 1000.00),
+    (2, 'bob@example.com', 2500.50),
+    (3, 'charlie@example.com', 750.25);
+
+INSERT INTO transactions (id, account_id, amount, created_at)
+VALUES
+    (1, 1, 120.50, '2026-06-20 10:00:00'),
+    (2, 1, 75.25,  '2026-06-21 14:30:00'),
+    (3, 2, 500.00, '2026-06-22 09:15:00'),
+
+    -- account_id nullable để verify R03
+    (4, NULL, 99.99, '2026-06-22 12:00:00');
+
+INSERT INTO transaction_log (txn_id, note)
+VALUES
+    (1, 'payment created'),
+    (2, 'payment completed'),
+    (3, 'manual adjustment');
