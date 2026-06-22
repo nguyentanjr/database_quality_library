@@ -7,7 +7,7 @@ public record QueryExecution(
         String sqlRaw,
         long durationMs,
         Instant timestamp,
-        String unitOfWorkId,
+        String contextId,
         String fingerprint,
         List<List<QueryParam>> paramSets,
         String stackTrace

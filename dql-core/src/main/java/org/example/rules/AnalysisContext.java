@@ -9,5 +9,5 @@ import java.util.List;
 public record AnalysisContext(
         SchemaSnapshot snapshot,
         List<QueryStats> queryStats,
-        List<QueryExecution> executions
+        List<QueryExecution> recentExecutions
 ) {}

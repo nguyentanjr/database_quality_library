@@ -3,7 +3,9 @@ package org.example;
 import net.ttddyy.dsproxy.QueryInfo;
 import net.ttddyy.dsproxy.support.ProxyDataSource;
 import net.ttddyy.dsproxy.support.ProxyDataSourceBuilder;
+import org.example.context.ThreadLocalContextProvider;
 import org.example.fingerprint.Fingerprinter;
+import org.example.model.QueryContext;
 import org.example.model.QueryExecution;
 import org.example.model.QueryParam;
 import org.example.storage.ExecutionSink;
@@ -33,7 +35,9 @@ public class DqlBeanPostProcessor implements BeanPostProcessor {
             return ProxyDataSourceBuilder.create(dataSource)
                     .afterQuery((execInfo, queryInfoList) -> {
                         ExecutionSink sink = sinkObjectProvider.getObject();
-                        String unitOfWorkId = String.valueOf(Thread.currentThread().threadId());
+                        QueryContext context = ThreadLocalContextProvider.current();
+
+                        String contextId = context != null ? context.id() : null;
                         for(QueryInfo queryInfo : queryInfoList) {
                             String stackTrace = Arrays.toString(Thread.currentThread().getStackTrace());
                             String rawSql = queryInfo.getQuery();
@@ -44,10 +48,10 @@ public class DqlBeanPostProcessor implements BeanPostProcessor {
                                     rawSql,
                                     duration,
                                     Instant.now(),
-                                    unitOfWorkId,
+                                    contextId,
                                     fingerprint,
                                     paramSets,
-                                    stackTrace
+                                    null
                             );
                             System.out.println(queryExecution);
                             sink.accept(queryExecution);

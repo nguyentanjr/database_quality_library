@@ -36,6 +36,7 @@ public class InMemoryExecutionSink implements ExecutionSink{
         long current = seq.incrementAndGet();
         int index = (int) (current % ringCapacity);
         ring[index] = execution;
+        //TODO: fingerprint duplicate
         String fingerprint = fingerprinter.fingerprint(execution.sqlRaw());
         StatsAccumulator statsAccumulator = stats.get(fingerprint);
         if(statsAccumulator == null) {
