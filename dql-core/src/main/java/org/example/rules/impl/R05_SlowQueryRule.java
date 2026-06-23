@@ -27,7 +27,7 @@ public class R05_SlowQueryRule implements Rule {
     @Override
     public List<Finding> analyze(AnalysisContext context) {
         List<Finding> findings = new ArrayList<>();
-        List<QueryExecution> queryExecutions = context.executions();
+        List<QueryExecution> queryExecutions = context.recentExecutions();
         Map<String, SlowQueryAccumulator> slowQueries = new HashMap<>();
 
         for(QueryExecution queryExecution : queryExecutions) {
