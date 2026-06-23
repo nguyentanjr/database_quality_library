@@ -1,9 +1,16 @@
 dql:
   enabled: true
+
   slow-queries:
     threshold-ms: 1000
-  misssing-index:
-    threshold-count:
+
+  n-plus-one:
+    min-count: 5
+    min-distinct-params: 3
+
+  missing-index:
+    threshold-count: 10
+
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/dqldemo
