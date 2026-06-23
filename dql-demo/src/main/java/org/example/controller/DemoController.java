@@ -71,4 +71,44 @@ public class DemoController {
 
         return "n+1 demo done";
     }
+    @GetMapping("/demo-repeat-same-param")
+    public String demoRepeatSameParam() throws Exception {
+        try (Connection connection = dataSource.getConnection()) {
+            for (int i = 0; i < 6; i++) {
+                try (PreparedStatement ps = connection.prepareStatement(
+                        "SELECT * FROM transactions WHERE account_id = ?"
+                )) {
+                    ps.setLong(1, 1);
+
+                    try (ResultSet rs = ps.executeQuery()) {
+                        while (rs.next()) {
+                            // consume rows
+                        }
+                    }
+                }
+            }
+        }
+
+        return "repeat same param demo done";
+    }
+    @GetMapping("/demo-n-plus-one-5")
+    public String demoNPlusOne5() throws Exception {
+        try (Connection connection = dataSource.getConnection()) {
+            for (long accountId = 1; accountId <= 5; accountId++) {
+                try (PreparedStatement ps = connection.prepareStatement(
+                        "SELECT * FROM transactions WHERE account_id = ?"
+                )) {
+                    ps.setLong(1, accountId);
+
+                    try (ResultSet rs = ps.executeQuery()) {
+                        while (rs.next()) {
+                            // consume rows
+                        }
+                    }
+                }
+            }
+        }
+
+        return "n+1 demo 5 done";
+    }
 }
