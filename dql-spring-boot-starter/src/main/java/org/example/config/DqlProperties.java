@@ -1,5 +1,7 @@
 package org.example.config;
 
+import org.example.rules.config.NPlusOneConfig;
+import org.example.rules.config.SlowQueryConfig;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "dql")
@@ -7,7 +9,11 @@ public class DqlProperties {
 
     private boolean enabled = true;
 
-    private final SlowQuery slowQuery = new SlowQuery();
+    private SlowQueries slowQueries = new SlowQueries();
+
+    private NPlusOne nPlusOne = new NPlusOne();
+
+    private MissingIndex missingIndex = new MissingIndex();
 
     public boolean isEnabled() {
         return enabled;
@@ -17,13 +23,32 @@ public class DqlProperties {
         this.enabled = enabled;
     }
 
-    public SlowQuery getSlowQuery() {
-        return slowQuery;
+    public SlowQueries getSlowQueries() {
+        return slowQueries;
     }
 
-    public static class SlowQuery {
+    public void setSlowQueries(SlowQueries slowQueries) {
+        this.slowQueries = slowQueries;
+    }
 
-        private long thresholdMs = 5000;
+    public NPlusOne getNPlusOne() {
+        return nPlusOne;
+    }
+
+    public void setNPlusOne(NPlusOne nPlusOne) {
+        this.nPlusOne = nPlusOne;
+    }
+
+    public MissingIndex getMissingIndex() {
+        return missingIndex;
+    }
+
+    public void setMissingIndex(MissingIndex missingIndex) {
+        this.missingIndex = missingIndex;
+    }
+
+    public static class SlowQueries {
+        private long thresholdMs = SlowQueryConfig.defaults().thresholdMs();
 
         public long getThresholdMs() {
             return thresholdMs;
@@ -31,6 +56,39 @@ public class DqlProperties {
 
         public void setThresholdMs(long thresholdMs) {
             this.thresholdMs = thresholdMs;
+        }
+    }
+
+    public static class NPlusOne {
+        private int minCount = NPlusOneConfig.defaults().minCount();
+        private int minDistinctParams = NPlusOneConfig.defaults().minDistinctParams();
+
+        public int getMinCount() {
+            return minCount;
+        }
+
+        public void setMinCount(int minCount) {
+            this.minCount = minCount;
+        }
+
+        public int getMinDistinctParams() {
+            return minDistinctParams;
+        }
+
+        public void setMinDistinctParams(int minDistinctParams) {
+            this.minDistinctParams = minDistinctParams;
+        }
+    }
+
+    public static class MissingIndex {
+        private int thresholdCount = 10;
+
+        public int getThresholdCount() {
+            return thresholdCount;
+        }
+
+        public void setThresholdCount(int thresholdCount) {
+            this.thresholdCount = thresholdCount;
         }
     }
 }

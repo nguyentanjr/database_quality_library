@@ -53,7 +53,6 @@ public class DqlBeanPostProcessor implements BeanPostProcessor {
                                     paramSets,
                                     null
                             );
-                            System.out.println(queryExecution);
                             sink.accept(queryExecution);
                         }
                     })
