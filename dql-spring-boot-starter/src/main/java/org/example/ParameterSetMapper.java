@@ -42,13 +42,11 @@ public class ParameterSetMapper {
         return List.copyOf(result);
     }
 
-    private static String safeParamValue(Object value) {
+    private static Object safeParamValue(Object value) {
         if (value == null) {
-            return "null";
+            return null;
         }
 
-        String s = String.valueOf(value);
-        int maxLen = 128;
-        return s.length() <= maxLen ? s : s.substring(0, maxLen) + "...";
+        return value;
     }
 }
