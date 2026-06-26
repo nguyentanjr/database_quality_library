@@ -20,10 +20,16 @@ public class StatsAccumulator {
     private final LongAdder count = new LongAdder();
     private final Set<String> tables;
     private final Set<String> columns;
+    private final boolean select;
 
     public StatsAccumulator(Set<String> tables, Set<String> columns) {
+        this(tables, columns, false);
+    }
+
+    public StatsAccumulator(Set<String> tables, Set<String> columns, boolean select) {
         this.tables = Set.copyOf(tables);
         this.columns = Set.copyOf(columns);
+        this.select = select;
     }
 
     public LongAdder getCount() {
@@ -38,10 +44,14 @@ public class StatsAccumulator {
         return columns;
     }
 
+    public boolean isSelect() {
+        return select;
+    }
 
     public static StatsAccumulator parseFrom(String fingerprint) {
         Set<String> tables = new HashSet<>();
         Set<String> columns = new HashSet<>();
+        boolean selectStatement = false;
 
         try {
             Statement statement = CCJSqlParserUtil.parse(fingerprint);
@@ -54,6 +64,7 @@ public class StatsAccumulator {
             }
 
             if (statement instanceof Select select) {
+                selectStatement = true;
                 PlainSelect plainSelect = select.getPlainSelect();
 
                 collectColumnsFromExpression(plainSelect.getWhere(), columns);
@@ -73,7 +84,7 @@ public class StatsAccumulator {
             System.out.println("LOG");
         }
 
-        return new StatsAccumulator(tables, columns);
+        return new StatsAccumulator(tables, columns, selectStatement);
     }
 
     public void recordHit() {

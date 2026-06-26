@@ -75,7 +75,8 @@ public class InMemoryExecutionSink implements ExecutionSink{
                     entry.getKey(),
                     acc.getCount().sum(),
                     Set.copyOf(acc.getTables()),
-                    Set.copyOf(acc.getColumns())));
+                    Set.copyOf(acc.getColumns()),
+                    acc.isSelect()));
         }
         return result;
     }

@@ -51,9 +51,28 @@ VALUES
 
     -- account_id nullable để verify R03
     (4, NULL, 99.99, '2026-06-22 12:00:00');
-
+INSERT INTO transactions (id, account_id, amount, created_at)
+SELECT
+    gs,
+    (random() * 2 + 1)::BIGINT,
+    random() * 10000,
+    '2026-06-20 10:00:00'
+FROM generate_series(5, 100000) AS gs;
 INSERT INTO transaction_log (txn_id, note)
 VALUES
     (1, 'payment created'),
     (2, 'payment completed'),
     (3, 'manual adjustment');
+
+CREATE TABLE orders (
+                        id BIGINT PRIMARY KEY,
+                        customer_id BIGINT NOT NULL,
+                        status VARCHAR(20)
+);
+
+INSERT INTO orders (id, customer_id, status)
+SELECT
+    gs,
+    (random() * 10000)::BIGINT,
+    'ACTIVE'
+FROM generate_series(1, 200000) gs;
