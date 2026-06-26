@@ -1,7 +1,9 @@
 package org.example;
 
 
+import org.example.adapter.PostgresExplainAdapter;
 import org.example.config.DqlProperties;
+import org.example.explain.ExplainAdapter;
 import org.example.fingerprint.Fingerprinter;
 import org.example.fingerprint.RegexFingerprint;
 import org.example.rules.Rule;
@@ -16,6 +18,8 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+
+import javax.sql.DataSource;
 
 
 @AutoConfiguration
@@ -36,6 +40,11 @@ public class DqlAutoConfiguration {
     @Bean
     public ExecutionSink executionSink(Fingerprinter fingerprinter) {
         return new InMemoryExecutionSink(100, fingerprinter, 1999);
+    }
+
+    @Bean
+    public ExplainAdapter explainAdapter(DataSource dataSource) {
+        return new PostgresExplainAdapter(dataSource);
     }
 
     @Bean
