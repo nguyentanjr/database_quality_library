@@ -1,65 +1,121 @@
 package org.example.adapter;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.explain.ExplainAdapter;
 import org.example.model.ExplainResult;
 import org.example.model.QueryExecution;
 import org.example.model.QueryParam;
-import org.example.model.QueryStats;
-import org.example.rules.AnalysisContext;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.regex.Pattern;
 
 public class PostgresExplainAdapter implements ExplainAdapter {
 
+    private static final Pattern FOR_UPDATE_PATTERN =
+            Pattern.compile("\\bfor\\s+update\\b", Pattern.CASE_INSENSITIVE);
+
     private final DataSource dataSource;
+    private final ObjectMapper mapper = new ObjectMapper();
 
     public PostgresExplainAdapter(DataSource dataSource) {
         this.dataSource = dataSource;
     }
 
     @Override
-    public ExplainResult explain(QueryExecution execution) throws SQLException {
+    public Optional<ExplainResult> explain(QueryExecution execution) throws SQLException {
+        if (execution == null || execution.sqlRaw() == null) {
+            return Optional.empty();
+        }
 
+        String rawSql = execution.sqlRaw().strip();
 
-        String explainSql = "EXPLAIN (FORMAT JSON) " + execution.sqlRaw();
+        if (!isSafeSelect(rawSql)) {
+            return Optional.empty();
+        }
 
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode root = null;
+        String explainSql = "EXPLAIN (FORMAT JSON) " + rawSql;
+
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(explainSql)) {
+
+            conn.setReadOnly(true);
+            ps.setQueryTimeout(3);
 
             bindParams(ps, execution);
 
             try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) {
-                    String json = rs.getString(1);
-                    root = mapper.readTree(json);
+                if (!rs.next()) {
+                    return Optional.empty();
                 }
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
+
+                String json = rs.getString(1);
+                JsonNode root = mapper.readTree(json);
+
+                JsonNode plan = root.path(0).path("Plan");
+                if (plan.isMissingNode()) {
+                    return Optional.empty();
+                }
+
+                return findLargestFullScan(plan);
+            } catch (Exception e) {
+                return Optional.empty();
             }
+        }
+    }
 
-            JsonNode plan = root.get(0).get("Plan");
+    private boolean isSafeSelect(String sql) {
+        String lower = sql.toLowerCase(Locale.ROOT);
+        return lower.length() > "select".length()
+                && lower.startsWith("select")
+                && Character.isWhitespace(lower.charAt("select".length()))
+                && !lower.contains(";")
+                && !FOR_UPDATE_PATTERN.matcher(lower).find();
+    }
 
-            String nodeType = plan.get("Node Type").asText();
-            String relationName = plan.get("Relation Name").asText();
-            String indexName = plan.get("Index Name").asText();
+    private Optional<ExplainResult> findLargestFullScan(JsonNode plan) {
+        List<ExplainResult> fullScans = new ArrayList<>();
+        collectFullScans(plan, fullScans);
 
-            if ("Seq Scan".equals(nodeType)) {
-                // full table scan
+        return fullScans.stream()
+                .max(Comparator.comparingLong(ExplainResult::estimatedRows));
+    }
+
+    private void collectFullScans(JsonNode plan, List<ExplainResult> fullScans) {
+        if (plan == null || plan.isMissingNode()) {
+            return;
+        }
+
+        String nodeType = plan.path("Node Type").asText(null);
+
+        if ("Seq Scan".equals(nodeType)) {
+            String relationName = plan.path("Relation Name").asText(null);
+            long estimatedRows = plan.path("Plan Rows").asLong(0);
+            double totalCost = plan.path("Total Cost").asDouble(0.0);
+
+            fullScans.add(new ExplainResult(
+                    true,
+                    relationName,
+                    estimatedRows,
+                    totalCost,
+                    nodeType
+            ));
+        }
+
+        JsonNode children = plan.path("Plans");
+        if (children.isArray()) {
+            for (JsonNode child : children) {
+                collectFullScans(child, fullScans);
             }
-
         }
     }
 
