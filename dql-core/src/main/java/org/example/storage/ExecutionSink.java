@@ -13,4 +13,9 @@ public interface ExecutionSink {
 
     List<QueryExecution> recentExecutions();
 
+    long slowQueryCount();
+
+    long totalQuery();
+
+    long totalSkipQuery();
 }

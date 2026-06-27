@@ -24,4 +24,19 @@ public class ConsoleExecutionSink implements ExecutionSink{
     public List<QueryExecution> recentExecutions() {
         return List.of();
     }
+
+    @Override
+    public long slowQueryCount() {
+        return 0;
+    }
+
+    @Override
+    public long totalQuery() {
+        return 0;
+    }
+
+    @Override
+    public long totalSkipQuery() {
+        return 0;
+    }
 }
