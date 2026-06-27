@@ -45,10 +45,6 @@ public class R09_NPlusOneRule implements Rule {
                         R09Summary::new
                 ).add(count, distinctParams);
             }
-            System.out.println("count = " + acc.getCount());
-            System.out.println("distinctParamKeys = " + acc.distinctParamKeys);
-            System.out.println("distinctParams = " + distinctParams);
-
         }
 
         return summaries.values()
