@@ -4,6 +4,7 @@ import org.example.fingerprint.Fingerprinter;
 import org.example.model.QueryExecution;
 import org.example.model.QueryStats;
 import org.example.model.StatsAccumulator;
+import org.example.rules.config.SlowQueryConfig;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,32 +23,48 @@ public class InMemoryExecutionSink implements ExecutionSink{
     private final Fingerprinter fingerprinter;
     private final ConcurrentHashMap<String, StatsAccumulator> stats = new ConcurrentHashMap<>();
     private final int maxFingerprints;
+    private final LongAdder slowQueriesCount = new LongAdder();
+    private final SlowQueryConfig slowQueryConfig;
 
-    public InMemoryExecutionSink(int ringCapacity,Fingerprinter fingerprinter, int maxFingerprints) {
+    public InMemoryExecutionSink(int ringCapacity,Fingerprinter fingerprinter, int maxFingerprints, SlowQueryConfig config) {
         this.ringCapacity = ringCapacity;
         this.ring = new QueryExecution[ringCapacity];
         this.fingerprinter = fingerprinter;
         this.maxFingerprints = maxFingerprints;
+        this.slowQueryConfig = config;
     }
 
     @Override
     public void accept(QueryExecution execution) {
         totalQuery.increment();
-        long current = seq.incrementAndGet();
+
+        long current = seq.getAndIncrement();
         int index = (int) (current % ringCapacity);
         ring[index] = execution;
-        //TODO: fingerprint duplicate
-        String fingerprint = fingerprinter.fingerprint(execution.sqlRaw());
+
+        if (execution.durationMs() >= slowQueryConfig.thresholdMs()) {
+            slowQueriesCount.increment();
+        }
+
+        String fingerprint = execution.fingerprint();
+
         StatsAccumulator statsAccumulator = stats.get(fingerprint);
-        if(statsAccumulator == null) {
-            if(stats.size() >= maxFingerprints) {
+        if (statsAccumulator == null) {
+            if (stats.size() >= maxFingerprints) {
                 skipQuery.increment();
                 return;
             }
-           statsAccumulator = stats.computeIfAbsent(fingerprint, k -> StatsAccumulator.parseFrom(k));
+            statsAccumulator = stats.computeIfAbsent(
+                    fingerprint,
+                    k -> StatsAccumulator.parseFrom(k)
+            );
         }
-        statsAccumulator.recordHit();
 
+        statsAccumulator.recordHit();
+    }
+
+    public long slowQueryCount() {
+        return slowQueriesCount.longValue();
     }
 
     public long totalQuery() {
@@ -80,5 +97,7 @@ public class InMemoryExecutionSink implements ExecutionSink{
         }
         return result;
     }
+
+    public
 
 }
