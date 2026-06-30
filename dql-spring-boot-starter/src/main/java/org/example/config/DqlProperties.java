@@ -15,6 +15,8 @@ public class DqlProperties {
 
     private MissingIndex missingIndex = new MissingIndex();
 
+    private Endpoints endpoints = new Endpoints();
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -45,6 +47,14 @@ public class DqlProperties {
 
     public void setMissingIndex(MissingIndex missingIndex) {
         this.missingIndex = missingIndex;
+    }
+
+    public Endpoints getEndpoints() {
+        return endpoints;
+    }
+
+    public void setEndpoints(Endpoints endpoints) {
+        this.endpoints = endpoints;
     }
 
     public static class SlowQueries {
@@ -89,6 +99,18 @@ public class DqlProperties {
 
         public void setThresholdCount(int thresholdCount) {
             this.thresholdCount = thresholdCount;
+        }
+    }
+
+    public static class Endpoints {
+        private boolean enabled = true;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
         }
     }
 }

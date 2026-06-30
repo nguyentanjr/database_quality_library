@@ -13,6 +13,7 @@
         <module>dql-core</module>
 <!--        <module>dql-jdbc</module>-->
         <module>dql-demo</module>
+    <module>spring-petclinic-rest</module>
         <module>dql-spring-boot-starter</module>
     </modules>
 

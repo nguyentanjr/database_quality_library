@@ -75,6 +75,11 @@ public class InMemoryExecutionSink implements ExecutionSink{
         return this.skipQuery.longValue();
     }
 
+    @Override
+    public long currentSeq() {
+        return seq.get();
+    }
+
     public List<QueryExecution> recentExecutions() {
         List<QueryExecution> result = new ArrayList<>();
         for(QueryExecution query : ring) {
@@ -97,7 +102,5 @@ public class InMemoryExecutionSink implements ExecutionSink{
         }
         return result;
     }
-
-    public
 
 }

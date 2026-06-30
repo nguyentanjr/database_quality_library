@@ -18,4 +18,6 @@ public interface ExecutionSink {
     long totalQuery();
 
     long totalSkipQuery();
+
+    long currentSeq();
 }

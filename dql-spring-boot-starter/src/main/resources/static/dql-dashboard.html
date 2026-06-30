@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DQL Dashboard</title>
+<style>
+  :root {
+    --bg: #0f1419;
+    --panel: #1a212b;
+    --panel-2: #222b37;
+    --border: #2c3744;
+    --text: #e6edf3;
+    --muted: #8b98a5;
+    --high: #f85149;
+    --medium: #d29922;
+    --low: #3fb950;
+    --accent: #58a6ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: rgba(15, 20, 25, 0.92);
+    backdrop-filter: blur(8px);
+    z-index: 10;
+    flex-wrap: wrap;
+  }
+  header h1 { font-size: 18px; margin: 0; letter-spacing: 0.5px; }
+  header .sub { color: var(--muted); font-size: 12px; font-weight: normal; }
+  .spacer { flex: 1; }
+  button {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  button:hover { background: #2c3744; border-color: var(--accent); }
+  button.primary { background: var(--accent); color: #0b1117; border-color: var(--accent); font-weight: 600; }
+  button.primary:hover { filter: brightness(1.1); }
+  label.toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); cursor: pointer; }
+  main { padding: 24px; max-width: 1200px; margin: 0 auto; }
+  .grid { display: grid; gap: 16px; }
+  .cards { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-bottom: 24px; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+  }
+  .card .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; }
+  .card .value { font-size: 30px; font-weight: 700; margin-top: 4px; }
+  .score-wrap { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+  .score-ring {
+    --val: 100;
+    --col: var(--low);
+    width: 130px; height: 130px; border-radius: 50%;
+    background: conic-gradient(var(--col) calc(var(--val) * 1%), var(--border) 0);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .score-ring .inner {
+    width: 104px; height: 104px; border-radius: 50%;
+    background: var(--panel); display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .score-ring .num { font-size: 34px; font-weight: 800; }
+  .score-ring .max { font-size: 11px; color: var(--muted); }
+  .sev-bars { display: flex; gap: 8px; flex-wrap: wrap; }
+  .sev-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 12px; border: 1px solid var(--border); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .dot.HIGH { background: var(--high); } .dot.MEDIUM { background: var(--medium); } .dot.LOW { background: var(--low); }
+  .section-title { font-size: 14px; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); margin: 0 0 12px; }
+  .two-col { grid-template-columns: 2fr 1fr; align-items: start; }
+  @media (max-width: 820px) { .two-col { grid-template-columns: 1fr; } }
+  .filters { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .chip { padding: 4px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--muted); }
+  .chip.active { background: var(--panel-2); color: var(--text); border-color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  td { padding: 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr.finding { cursor: pointer; }
+  tr.finding:hover { background: var(--panel-2); }
+  .sev-tag { font-weight: 700; font-size: 11px; padding: 2px 8px; border-radius: 4px; }
+  .sev-tag.HIGH { background: rgba(248,81,73,0.15); color: var(--high); }
+  .sev-tag.MEDIUM { background: rgba(210,153,34,0.15); color: var(--medium); }
+  .sev-tag.LOW { background: rgba(63,185,80,0.15); color: var(--low); }
+  .rule-id { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--accent); font-size: 12px; }
+  .loc { font-family: ui-monospace, monospace; font-size: 12px; color: var(--muted); }
+  .detail-row td { background: #161c24; color: var(--muted); font-size: 12px; }
+  .detail-row pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, monospace; }
+  .suggestion { color: var(--low); }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .bar-row .name { width: 130px; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: ui-monospace, monospace; }
+  .bar-track { flex: 1; background: var(--panel-2); border-radius: 4px; height: 22px; overflow: hidden; }
+  .bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #1f6feb); border-radius: 4px; }
+  .bar-row .cnt { width: 44px; text-align: right; font-size: 13px; font-weight: 600; }
+  .empty { color: var(--muted); font-style: italic; padding: 20px 0; text-align: center; }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--panel-2); border: 1px solid var(--accent); color: var(--text); padding: 10px 18px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  .err { color: var(--high); }
+  dialog { background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 10px; max-width: 760px; width: 90%; padding: 0; }
+  dialog::backdrop { background: rgba(0,0,0,0.6); }
+  .modal-head { display: flex; align-items: center; padding: 16px 18px; border-bottom: 1px solid var(--border); }
+  .modal-head h3 { margin: 0; font-size: 15px; }
+  .modal-body { padding: 18px; }
+  textarea { width: 100%; height: 320px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: ui-monospace, monospace; font-size: 12px; resize: vertical; }
+  .hint { font-size: 12px; color: var(--muted); margin: 0 0 10px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>DQL Dashboard <span class="sub">Database Quality Library</span></h1>
+  </div>
+  <div class="spacer"></div>
+  <label class="toggle"><input type="checkbox" id="auto" /> Auto-refresh 5s</label>
+  <button id="aiBtn">Copy AI context</button>
+  <button id="refreshBtn" class="primary">↻ Refresh</button>
+</header>
+
+<main>
+  <div id="error"></div>
+
+  <div class="grid two-col" style="margin-bottom:24px;">
+    <div class="panel">
+      <p class="section-title">Overall score</p>
+      <div class="score-wrap">
+        <div class="score-ring" id="ring">
+          <div class="inner">
+            <span class="num" id="scoreNum">–</span>
+            <span class="max">/ 100</span>
+          </div>
+        </div>
+        <div>
+          <div class="sev-bars" id="sevBars"></div>
+          <p class="hint" style="margin-top:12px;">
+            Điểm = max(0, 100 − Σ penalty). HIGH −20 · MEDIUM −10 · LOW −2.<br/>
+            <span class="sub">Tính client-side theo đúng công thức JsonReporter.</span>
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="grid cards">
+      <div class="panel card"><div class="label">Total SQL</div><div class="value" id="mTotal">–</div></div>
+      <div class="panel card"><div class="label">Slow queries</div><div class="value" id="mSlow" style="color:var(--medium)">–</div></div>
+      <div class="panel card"><div class="label">N+1 detected</div><div class="value" id="mNplus" style="color:var(--high)">–</div></div>
+      <div class="panel card"><div class="label">Findings</div><div class="value" id="mFindings">–</div></div>
+    </div>
+  </div>
+
+  <div class="grid two-col">
+    <div class="panel">
+      <p class="section-title">Findings</p>
+      <div class="filters" id="filters">
+        <button class="chip active" data-sev="ALL">All</button>
+        <button class="chip" data-sev="HIGH">High</button>
+        <button class="chip" data-sev="MEDIUM">Medium</button>
+        <button class="chip" data-sev="LOW">Low</button>
+      </div>
+      <table>
+        <thead><tr><th>Severity</th><th>Rule</th><th>Message</th><th>Location</th></tr></thead>
+        <tbody id="findingsBody"></tbody>
+      </table>
+      <div class="empty" id="findingsEmpty" style="display:none;">Chưa có finding nào 🎉</div>
+    </div>
+    <div class="panel">
+      <p class="section-title">Top tables by query frequency</p>
+      <div id="topTables"></div>
+    </div>
+  </div>
+</main>
+
+<dialog id="aiModal">
+  <div class="modal-head">
+    <h3>AI-ready context</h3>
+    <div class="spacer"></div>
+    <button id="aiCopy" class="primary">Copy</button>
+    <button id="aiClose" style="margin-left:8px;">Close</button>
+  </div>
+  <div class="modal-body">
+    <p class="hint" id="aiHint"></p>
+    <textarea id="aiText" readonly></textarea>
+  </div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SEV_ORDER = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+const SEV_PENALTY = { HIGH: 20, MEDIUM: 10, LOW: 2 };
+let state = { findings: [], metrics: null, filter: "ALL" };
+
+const $ = (id) => document.getElementById(id);
+
+async function getJson(path) {
+  const res = await fetch(path, { headers: { Accept: "application/json" } });
+  if (!res.ok) throw new Error(path + " → HTTP " + res.status);
+  return res.json();
+}
+
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove("show"), 1800);
+}
+
+function computeScore(findings) {
+  const penalty = findings.reduce((s, f) => s + (SEV_PENALTY[f.severity] || 0), 0);
+  return Math.max(0, 100 - penalty);
+}
+
+function sevCounts(findings) {
+  const c = { HIGH: 0, MEDIUM: 0, LOW: 0 };
+  findings.forEach((f) => { if (c[f.severity] != null) c[f.severity]++; });
+  return c;
+}
+
+function scoreColor(s) {
+  if (s >= 80) return "var(--low)";
+  if (s >= 50) return "var(--medium)";
+  return "var(--high)";
+}
+
+function renderScore() {
+  const s = computeScore(state.findings);
+  const ring = $("ring");
+  ring.style.setProperty("--val", s);
+  ring.style.setProperty("--col", scoreColor(s));
+  $("scoreNum").textContent = s;
+  $("scoreNum").style.color = scoreColor(s);
+
+  const c = sevCounts(state.findings);
+  $("sevBars").innerHTML = ["HIGH", "MEDIUM", "LOW"]
+    .map((k) => `<span class="sev-pill"><span class="dot ${k}"></span>${k} · ${c[k]}</span>`)
+    .join("");
+  $("mFindings").textContent = state.findings.length;
+}
+
+function renderMetrics() {
+  const m = state.metrics || {};
+  $("mTotal").textContent = m.totalQueries ?? "–";
+  $("mSlow").textContent = m.slowCount ?? "–";
+  // record component is nPLusOneCount (capital L) — tolerate both spellings
+  $("mNplus").textContent = m.nPLusOneCount ?? m.nPlusOneCount ?? "–";
+
+  const tt = (m.topTables || []);
+  const max = Math.max(1, ...tt.map((t) => t.count));
+  $("topTables").innerHTML = tt.length
+    ? tt.map((t) => `
+        <div class="bar-row">
+          <span class="name" title="${esc(t.table)}">${esc(t.table)}</span>
+          <span class="bar-track"><span class="bar-fill" style="width:${(t.count / max) * 100}%"></span></span>
+          <span class="cnt">${t.count}</span>
+        </div>`).join("")
+    : `<div class="empty">Chưa có query nào được intercept</div>`;
+}
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
+function renderFindings() {
+  const body = $("findingsBody");
+  let rows = [...state.findings].sort(
+    (a, b) => (SEV_ORDER[a.severity] ?? 9) - (SEV_ORDER[b.severity] ?? 9)
+  );
+  if (state.filter !== "ALL") rows = rows.filter((f) => f.severity === state.filter);
+
+  $("findingsEmpty").style.display = rows.length ? "none" : "block";
+  body.innerHTML = rows.map((f, i) => {
+    const loc = [f.table, f.column].filter(Boolean).join(".") || (f.fingerprint ? "fp:" + f.fingerprint.slice(0, 8) : "–");
+    const details = f.details && Object.keys(f.details).length
+      ? JSON.stringify(f.details, null, 2) : null;
+    return `
+      <tr class="finding" data-i="${i}">
+        <td><span class="sev-tag ${f.severity}">${f.severity}</span></td>
+        <td><span class="rule-id">${esc(f.ruleId)}</span></td>
+        <td>${esc(f.message)}</td>
+        <td class="loc">${esc(loc)}</td>
+      </tr>
+      <tr class="detail-row" id="detail-${i}" style="display:none;">
+        <td colspan="4">
+          ${f.suggestion ? `<div class="suggestion">💡 ${esc(f.suggestion)}</div>` : ""}
+          ${details ? `<pre>${esc(details)}</pre>` : ""}
+        </td>
+      </tr>`;
+  }).join("");
+
+  body.querySelectorAll("tr.finding").forEach((tr) => {
+    tr.onclick = () => {
+      const d = $("detail-" + tr.dataset.i);
+      if (d) d.style.display = d.style.display === "none" ? "table-row" : "none";
+    };
+  });
+}
+
+async function load() {
+  $("error").innerHTML = "";
+  try {
+    const [findings, metrics] = await Promise.all([
+      getJson("dql/findings"),
+      getJson("dql/metrics"),
+    ]);
+    state.findings = Array.isArray(findings) ? findings : [];
+    state.metrics = metrics;
+    renderScore();
+    renderMetrics();
+    renderFindings();
+  } catch (e) {
+    $("error").innerHTML = `<div class="panel err">⚠ Không tải được dữ liệu: ${esc(e.message)}<br/>
+      <span class="sub">Kiểm tra app đang chạy và endpoint /dql/* bật (dql.endpoints.enabled=true).</span></div>`;
+  }
+}
+
+function buildAiContextFallback() {
+  const s = computeScore(state.findings);
+  const c = sevCounts(state.findings);
+  const m = state.metrics || {};
+  const top = state.findings
+    .slice()
+    .sort((a, b) => (SEV_ORDER[a.severity] ?? 9) - (SEV_ORDER[b.severity] ?? 9))
+    .slice(0, 10);
+  const lines = [];
+  lines.push("# Database Quality Report (DQL)");
+  lines.push("");
+  lines.push(`Overall score: ${s}/100  (HIGH ${c.HIGH} · MEDIUM ${c.MEDIUM} · LOW ${c.LOW})`);
+  lines.push(`Total SQL intercepted: ${m.totalQueries ?? "?"} · Slow: ${m.slowCount ?? "?"} · N+1: ${m.nPLusOneCount ?? m.nPlusOneCount ?? "?"}`);
+  lines.push("");
+  lines.push("## Top findings");
+  top.forEach((f) => {
+    const loc = [f.table, f.column].filter(Boolean).join(".");
+    lines.push(`- [${f.severity}] ${f.ruleId}: ${f.message}${loc ? " (" + loc + ")" : ""}`);
+    if (f.suggestion) lines.push(`    → ${f.suggestion}`);
+  });
+  lines.push("");
+  lines.push("## Top tables by query frequency");
+  (m.topTables || []).forEach((t) => lines.push(`- ${t.table}: ${t.count}`));
+  lines.push("");
+  lines.push("Hãy review schema và đề xuất tối ưu query dựa trên các finding trên.");
+  return lines.join("\n");
+}
+
+async function openAiContext() {
+  let text, fromServer = false;
+  try {
+    const res = await fetch("dql/ai-context", { headers: { Accept: "text/plain, application/json" } });
+    if (res.ok) {
+      const ct = res.headers.get("content-type") || "";
+      text = ct.includes("json") ? JSON.stringify(await res.json(), null, 2) : await res.text();
+      fromServer = true;
+    }
+  } catch (e) { /* ignore, fall back */ }
+  if (!text) text = buildAiContextFallback();
+
+  $("aiText").value = text;
+  $("aiHint").innerHTML = fromServer
+    ? "Nguồn: <code>/dql/ai-context</code> (server)."
+    : "⚠ Endpoint <code>/dql/ai-context</code> chưa có — đang dựng tạm từ findings + metrics ở client. Khi bạn code endpoint thật, dashboard sẽ tự dùng nó.";
+  $("aiModal").showModal();
+}
+
+// wiring
+$("refreshBtn").onclick = load;
+$("filters").onclick = (e) => {
+  const chip = e.target.closest(".chip");
+  if (!chip) return;
+  state.filter = chip.dataset.sev;
+  document.querySelectorAll(".chip").forEach((c) => c.classList.toggle("active", c === chip));
+  renderFindings();
+};
+$("aiBtn").onclick = openAiContext;
+$("aiClose").onclick = () => $("aiModal").close();
+$("aiCopy").onclick = async () => {
+  $("aiText").select();
+  try { await navigator.clipboard.writeText($("aiText").value); } catch (e) { document.execCommand("copy"); }
+  toast("Đã copy AI context");
+};
+let timer = null;
+$("auto").onchange = (e) => {
+  clearInterval(timer);
+  if (e.target.checked) timer = setInterval(load, 5000);
+};
+
+load();
+</script>
+</body>
+</html>

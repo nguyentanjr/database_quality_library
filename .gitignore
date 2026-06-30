@@ -1,6 +1,10 @@
 # Maven build output
 target/
 
+# Local folders
+doc/
+spring-petclinic-rest/
+
 # IntelliJ IDEA
 .idea/
 *.iml
@@ -23,4 +27,3 @@ target/
 # Operating system files
 .DS_Store
 Thumbs.db
-

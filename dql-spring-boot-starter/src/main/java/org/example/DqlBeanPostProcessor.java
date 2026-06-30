@@ -39,8 +39,13 @@ public class DqlBeanPostProcessor implements BeanPostProcessor {
 
                         String contextId = context != null ? context.id() : null;
                         for(QueryInfo queryInfo : queryInfoList) {
-                            String stackTrace = Arrays.toString(Thread.currentThread().getStackTrace());
+                            //String stackTrace = Arrays.toString(Thread.currentThread().getStackTrace());
+
                             String rawSql = queryInfo.getQuery();
+                            if (!shouldCapture(rawSql)) {
+                                continue;
+                            }
+
                             long duration = execInfo.getElapsedTime();
                             String fingerprint = fingerprinter.fingerprint(rawSql);
                             List<List<QueryParam>> paramSets = ParameterSetMapper.toParamSets(queryInfo.getParametersList());
@@ -59,5 +64,14 @@ public class DqlBeanPostProcessor implements BeanPostProcessor {
                     .build();
         }
         return bean;
+    }
+    private boolean shouldCapture(String sql) {
+        if (sql == null || sql.isBlank()) {
+            return false;
+        }
+
+        String s = sql.strip().toLowerCase();
+
+        return s.startsWith("select ");
     }
 }

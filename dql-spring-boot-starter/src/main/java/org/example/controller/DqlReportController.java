@@ -1,44 +1,48 @@
 package org.example.controller;
 
 import org.example.analyzer.RuleEngine;
-import org.example.collector.SchemaCollector;
 import org.example.model.Finding;
 import org.example.model.SchemaSnapshot;
 import org.example.rules.AnalysisContext;
-import org.example.rules.Rule;
+import org.example.schema.SchemaSnapshotProvider;
 import org.example.storage.ExecutionSink;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.sql.DataSource;
 import java.sql.SQLException;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/dql")
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+@ConditionalOnProperty(
+        prefix = "dql.endpoints",
+        name = "enabled",
+        havingValue = "true",
+        matchIfMissing = true
+)
 public class DqlReportController {
 
-    private final DataSource dataSource;
     private final ExecutionSink executionSink;
-    private final List<Rule> rules;
+    private final RuleEngine ruleEngine;
+    private final SchemaSnapshotProvider schemaProvider;
 
     public DqlReportController(
-            DataSource dataSource,
             ExecutionSink executionSink,
-            List<Rule> rules
+            RuleEngine ruleEngine, SchemaSnapshotProvider schemaProvider
     ) {
-        this.dataSource = dataSource;
         this.executionSink = executionSink;
-        this.rules = rules;
+        this.ruleEngine = ruleEngine;
+        this.schemaProvider = schemaProvider;
     }
 
     @GetMapping("/findings")
     public List<Finding> findings() throws SQLException {
-        Map<String, Boolean> groupByFingerprint = new HashMap<>();
-        SchemaSnapshot snapshot = new SchemaCollector().collect(dataSource);
+        SchemaSnapshot snapshot = schemaProvider.get();
 
         AnalysisContext ctx = new AnalysisContext(
                 snapshot,
@@ -46,11 +50,6 @@ public class DqlReportController {
                 executionSink.recentExecutions()
         );
 
-        RuleEngine engine = new RuleEngine(rules);
-        List<Finding> findings = engine.run(ctx);
-        System.out.println(findings);
-        return List.of();
+        return ruleEngine.run(ctx);
     }
-
-
 }
