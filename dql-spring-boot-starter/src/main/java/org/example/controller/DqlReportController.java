@@ -1,55 +1,65 @@
 package org.example.controller;
 
-import org.example.analyzer.RuleEngine;
-import org.example.model.Finding;
-import org.example.model.SchemaSnapshot;
-import org.example.rules.AnalysisContext;
-import org.example.schema.SchemaSnapshotProvider;
-import org.example.storage.ExecutionSink;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.example.model.AiContext;
+import org.example.model.QualityReport;
+import org.example.scheduler.DqlAnalysisScheduler;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
-import javax.sql.DataSource;
-import java.sql.SQLException;
-import java.util.List;
+import java.time.Instant;
 
 @RestController
 @RequestMapping("/dql")
-@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@ConditionalOnProperty(
-        prefix = "dql.endpoints",
-        name = "enabled",
-        havingValue = "true",
-        matchIfMissing = true
-)
 public class DqlReportController {
 
-    private final ExecutionSink executionSink;
-    private final RuleEngine ruleEngine;
-    private final SchemaSnapshotProvider schemaProvider;
+    private final DqlAnalysisScheduler scheduler;
 
-    public DqlReportController(
-            ExecutionSink executionSink,
-            RuleEngine ruleEngine, SchemaSnapshotProvider schemaProvider
-    ) {
-        this.executionSink = executionSink;
-        this.ruleEngine = ruleEngine;
-        this.schemaProvider = schemaProvider;
+    public DqlReportController(DqlAnalysisScheduler scheduler) {
+        this.scheduler = scheduler;
     }
 
     @GetMapping("/findings")
-    public List<Finding> findings() throws SQLException {
-        SchemaSnapshot snapshot = schemaProvider.get();
+    public QualityReport findings() {
+        QualityReport report = scheduler.latestReport();
 
-        AnalysisContext ctx = new AnalysisContext(
-                snapshot,
-                executionSink.stats(),
-                executionSink.recentExecutions()
-        );
+        if (report == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "DQL report is not ready yet"
+            );
+        }
 
-        return ruleEngine.run(ctx);
+        return report;
+    }
+
+    @GetMapping("/ai-context")
+    public AiContext aiContext() {
+        AiContext aiContext = scheduler.latestAiContext();
+
+        if (aiContext == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "DQL AI context is not ready yet"
+            );
+        }
+
+        return aiContext;
+    }
+
+    @GetMapping("/last-run")
+    public Instant lastRun() {
+        Instant lastRun = scheduler.lastRun();
+
+        if (lastRun == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "DQL analysis has not run yet"
+            );
+        }
+
+        return lastRun;
     }
 }

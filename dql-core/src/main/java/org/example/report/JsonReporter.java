@@ -12,29 +12,32 @@ import java.util.Map;
 
 public class JsonReporter {
 
+    private static final int TOP_FINDINGS = 5;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public QualityReport buildReport(
             List<Finding> findings,
             int tablesScanned
     ) {
+        List<Finding> sorted = FindingPriority.sortedBySeverity(findings);
         return new QualityReport(
-                findings,
-                score(findings),
-                metrics(findings, tablesScanned)
+                sorted,
+                score(sorted),
+                metrics(sorted, tablesScanned)
         );
     }
 
 
-    public String report(List<Finding> findings, int tableScanned) throws JsonProcessingException {
-        QualityReport report = new QualityReport(findings, score(findings), metrics(findings, tableScanned));
-    try {
-        return objectMapper.writerWithDefaultPrettyPrinter()
-                .writeValueAsString(report);
-    } catch (JsonProcessingException e) {
-        throw new RuntimeException("JsonProcessingException");
+    public String report(List<Finding> findings, int tablesScanned) {
+        QualityReport report = buildReport(findings, tablesScanned);
+        try {
+            return objectMapper.writerWithDefaultPrettyPrinter()
+                    .writeValueAsString(report);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to serialize QualityReport", e);
+        }
     }
-}
 
     private int score(List<Finding> findings) {
         int penaltyScore = 0;
@@ -52,7 +55,7 @@ public class JsonReporter {
                     .count();
             metrics.put(severity.name().toLowerCase(), count);
         }
-        metrics.put("tablesScanned", tablesScanned);
+        metrics.put("tablesAnalyzed", tablesScanned);
         return metrics;
     }
 }
