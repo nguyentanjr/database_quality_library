@@ -9,6 +9,8 @@ import org.example.controller.MetricController;
 import org.example.explain.ExplainAdapter;
 import org.example.fingerprint.Fingerprinter;
 import org.example.fingerprint.RegexFingerprint;
+import org.example.report.AiContextExporter;
+import org.example.report.JsonReporter;
 import org.example.rules.Rule;
 import org.example.rules.config.FullScanConfig;
 import org.example.rules.config.MissingIndexConfig;
@@ -25,11 +27,13 @@ import org.example.rules.impl.R07_MissingIndexRule;
 import org.example.rules.impl.R08_UnusedIndexRule;
 import org.example.rules.impl.R09_NPlusOneRule;
 import org.example.rules.impl.R10_FullScanTableRule;
+import org.example.scheduler.DqlAnalysisScheduler;
 import org.example.schema.SchemaSnapshotProvider;
 import org.example.storage.ExecutionSink;
 import org.example.storage.InMemoryExecutionSink;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -154,6 +158,32 @@ public class DqlAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean
+    @ConditionalOnProperty(
+            prefix = "dql.analysis",
+            name = "enabled",
+            havingValue = "true",
+            matchIfMissing = true
+    )
+    public DqlAnalysisScheduler dqlAnalysisScheduler(
+            ExecutionSink executionSink,
+            SchemaSnapshotProvider schemaSnapshotProvider,
+            RuleEngine ruleEngine,
+            JsonReporter jsonReporter,
+            AiContextExporter aiContextExporter,
+            DqlProperties properties
+    ) {
+        return new DqlAnalysisScheduler(
+                executionSink,
+                schemaSnapshotProvider,
+                ruleEngine,
+                jsonReporter,
+                aiContextExporter,
+                properties.getAnalysis().getDelaySeconds()
+        );
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
     @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
     @ConditionalOnProperty(
             prefix = "dql.endpoints",
@@ -161,12 +191,11 @@ public class DqlAutoConfiguration {
             havingValue = "true",
             matchIfMissing = true
     )
+    @ConditionalOnBean(DqlAnalysisScheduler.class)
     public DqlReportController dqlReportController(
-            ExecutionSink executionSink,
-            RuleEngine ruleEngine,
-            SchemaSnapshotProvider schemaSnapshotProvider
+            DqlAnalysisScheduler scheduler
     ) {
-        return new DqlReportController(executionSink, ruleEngine, schemaSnapshotProvider);
+        return new DqlReportController(scheduler);
     }
 
     @Bean
@@ -184,6 +213,18 @@ public class DqlAutoConfiguration {
     ) {
         return new MetricController(executionSink, nPlusOneRule);
     }
-    
+
+
+    @Bean
+    public JsonReporter jsonReporter() {
+        return new JsonReporter();
+    }
+
+    @Bean
+    public AiContextExporter aiContextExporter() {
+        return new AiContextExporter();
+    }
+
+
 }
 
