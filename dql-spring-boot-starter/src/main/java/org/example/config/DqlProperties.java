@@ -17,6 +17,8 @@ public class DqlProperties {
 
     private Endpoints endpoints = new Endpoints();
 
+    private Analysis analysis = new Analysis();
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -55,6 +57,14 @@ public class DqlProperties {
 
     public void setEndpoints(Endpoints endpoints) {
         this.endpoints = endpoints;
+    }
+
+    public Analysis getAnalysis() {
+        return analysis;
+    }
+
+    public void setAnalysis(Analysis analysis) {
+        this.analysis = analysis;
     }
 
     public static class SlowQueries {
@@ -111,6 +121,27 @@ public class DqlProperties {
 
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
+        }
+    }
+
+    public static class Analysis {
+        private boolean enabled = true;
+        private long delaySeconds = 5;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public long getDelaySeconds() {
+            return delaySeconds;
+        }
+
+        public void setDelaySeconds(long delaySeconds) {
+            this.delaySeconds = delaySeconds;
         }
     }
 }
