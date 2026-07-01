@@ -1,9 +1,10 @@
 package org.example.enums;
 
 public enum Severity {
-    HIGH(20),
-    MEDIUM(10),
-    LOW(2);
+    CRITICAL(15),
+    HIGH(8),
+    MEDIUM(3),
+    LOW(1);
 
     private final int score;
 

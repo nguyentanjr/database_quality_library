@@ -39,4 +39,9 @@ public class ConsoleExecutionSink implements ExecutionSink{
     public long totalSkipQuery() {
         return 0;
     }
+
+    @Override
+    public long currentSeq() {
+        return 0;
+    }
 }

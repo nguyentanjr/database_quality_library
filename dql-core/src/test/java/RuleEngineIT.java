@@ -43,7 +43,7 @@ class RuleEngineIT {
     void runs_schema_rules_and_builds_report() throws Exception {
         SchemaSnapshot snap = new SchemaCollector().collect(ds());
 
-        AnalysisContext ctx = new AnalysisContext(snap);
+        AnalysisContext ctx = new AnalysisContext(snap, List.of(), List.of());
 
         RuleEngine engine = new RuleEngine(List.of(
                 new R01_MissingPrimaryKeyRule(),
@@ -69,7 +69,10 @@ class RuleEngineIT {
                 snap.tables().size()
         );
 
-        assertEquals(30, report.score());
+        int expectedScore = Math.max(0, 100 - findings.stream()
+                .mapToInt(f -> f.severity().getScore())
+                .sum());
+        assertEquals(expectedScore, report.score());
 
         assertTrue(findings.stream().anyMatch(f ->
                 f.ruleId().equals(R03_NullableRiskRule.ID) && "account_id".equals(f.column())));

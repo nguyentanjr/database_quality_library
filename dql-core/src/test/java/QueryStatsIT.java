@@ -2,6 +2,7 @@ import org.example.fingerprint.Fingerprinter;
 import org.example.fingerprint.RegexFingerprint;
 import org.example.model.QueryExecution;
 import org.example.model.QueryStats;
+import org.example.rules.config.SlowQueryConfig;
 import org.example.storage.InMemoryExecutionSink;
 import org.junit.jupiter.api.Test;
 import org.postgresql.ds.PGSimpleDataSource;
@@ -45,7 +46,7 @@ class QueryStatsIT {
         InMemoryExecutionSink sink = new InMemoryExecutionSink(
                 100,
                 fingerprinter,
-                100
+                100, SlowQueryConfig.defaults()
         );
 
         executeAndAccept(sink, "SELECT * FROM accounts WHERE id = 1");
