@@ -39,7 +39,7 @@ public class R02_SuspiciousTypeRule implements Rule {
                 ) {
                     findings.add(new Finding(
                             ID,
-                            Severity.HIGH,
+                            Severity.CRITICAL,
                             "Monetary column uses floating-point type",
                             "Use NUMERIC or DECIMAL for monetary values",
                             table.name(),
