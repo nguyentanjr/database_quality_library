@@ -9,6 +9,7 @@ public record QueryExecution(
         Instant timestamp,
         String contextId,
         String fingerprint,
+        boolean select,
         List<List<QueryParam>> paramSets,
         String stackTrace
 ) {
