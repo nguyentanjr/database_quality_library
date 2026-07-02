@@ -12,7 +12,6 @@ public record NullableRiskConfig(
         return new NullableRiskConfig(
                 Map.of(
                         Severity.MEDIUM, List.of("email", "username", "status", "code")
-                       // Severity.LOW, List.of("created_at", "updated_at")
                 )
         );
     }

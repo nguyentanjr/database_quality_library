@@ -14,15 +14,26 @@ import org.example.model.TableFrequency;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class AiContextExporter {
 
-    private static final int TOP_FINDINGS = 5;
-    private static final int SAMPLE_QUERIES = 5;
-    private static final int TOP_TABLES = 5;
+    private final int TOP_FINDINGS;
+    private final int SAMPLE_QUERIES;
+    private final int TOP_TABLES;
+
+    public AiContextExporter() {
+        this(5, 5, 5);
+    }
+
+    public AiContextExporter(int topFindings, int sampleQueries, int topTables) {
+        this.TOP_FINDINGS = topFindings;
+        this.SAMPLE_QUERIES = sampleQueries;
+        this.TOP_TABLES = topTables;
+    }
 
     public AiContext export(
             SchemaSnapshot snapshot,
@@ -147,20 +158,16 @@ public class AiContextExporter {
     }
 
     private List<String> pickQuerySamples(List<QueryExecution> recentExecutions) {
-        Map<String, String> sampleByFingerprint = new LinkedHashMap<>();
+        Set<String> distinctFingerprints = new LinkedHashSet<>();
 
         for (QueryExecution execution : recentExecutions) {
-            if (sampleByFingerprint.size() >= SAMPLE_QUERIES) {
+            if (distinctFingerprints.size() >= SAMPLE_QUERIES) {
                 break;
             }
 
-            String fingerprint = execution.fingerprint();
-
-            if (!sampleByFingerprint.containsKey(fingerprint)) {
-                sampleByFingerprint.put(fingerprint, execution.sqlRaw());
-            }
+            distinctFingerprints.add(execution.fingerprint());
         }
 
-        return new ArrayList<>(sampleByFingerprint.values());
+        return new ArrayList<>(distinctFingerprints);
     }
 }

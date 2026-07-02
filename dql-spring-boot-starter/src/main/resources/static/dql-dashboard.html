@@ -12,6 +12,7 @@
     --border: #2c3744;
     --text: #e6edf3;
     --muted: #8b98a5;
+    --critical: #db2777;
     --high: #f85149;
     --medium: #d29922;
     --low: #3fb950;
@@ -85,7 +86,7 @@
   .sev-bars { display: flex; gap: 8px; flex-wrap: wrap; }
   .sev-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 12px; border: 1px solid var(--border); }
   .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-  .dot.HIGH { background: var(--high); } .dot.MEDIUM { background: var(--medium); } .dot.LOW { background: var(--low); }
+  .dot.CRITICAL { background: var(--critical); } .dot.HIGH { background: var(--high); } .dot.MEDIUM { background: var(--medium); } .dot.LOW { background: var(--low); }
   .section-title { font-size: 14px; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); margin: 0 0 12px; }
   .two-col { grid-template-columns: 2fr 1fr; align-items: start; }
   @media (max-width: 820px) { .two-col { grid-template-columns: 1fr; } }
@@ -98,6 +99,7 @@
   tr.finding { cursor: pointer; }
   tr.finding:hover { background: var(--panel-2); }
   .sev-tag { font-weight: 700; font-size: 11px; padding: 2px 8px; border-radius: 4px; }
+  .sev-tag.CRITICAL { background: rgba(219,39,119,0.18); color: var(--critical); }
   .sev-tag.HIGH { background: rgba(248,81,73,0.15); color: var(--high); }
   .sev-tag.MEDIUM { background: rgba(210,153,34,0.15); color: var(--medium); }
   .sev-tag.LOW { background: rgba(63,185,80,0.15); color: var(--low); }
@@ -151,8 +153,8 @@
         <div>
           <div class="sev-bars" id="sevBars"></div>
           <p class="hint" style="margin-top:12px;">
-            Điểm = max(0, 100 − Σ penalty). HIGH −20 · MEDIUM −10 · LOW −2.<br/>
-            <span class="sub">Tính client-side theo đúng công thức JsonReporter.</span>
+            Điểm = max(0, 100 − Σ weight severity), lấy trực tiếp từ server.<br/>
+            <span class="sub">Weight cấu hình qua dql.score.weights (mặc định CRITICAL 15 · HIGH 8 · MEDIUM 3 · LOW 1).</span>
           </p>
         </div>
       </div>
@@ -170,6 +172,7 @@
       <p class="section-title">Findings</p>
       <div class="filters" id="filters">
         <button class="chip active" data-sev="ALL">All</button>
+        <button class="chip" data-sev="CRITICAL">Critical</button>
         <button class="chip" data-sev="HIGH">High</button>
         <button class="chip" data-sev="MEDIUM">Medium</button>
         <button class="chip" data-sev="LOW">Low</button>
@@ -203,9 +206,8 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const SEV_ORDER = { HIGH: 0, MEDIUM: 1, LOW: 2 };
-const SEV_PENALTY = { HIGH: 20, MEDIUM: 10, LOW: 2 };
-let state = { findings: [], metrics: null, filter: "ALL" };
+const SEV_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+let state = { findings: [], score: null, metrics: null, filter: "ALL" };
 
 const $ = (id) => document.getElementById(id);
 
@@ -223,13 +225,8 @@ function toast(msg) {
   toast._t = setTimeout(() => t.classList.remove("show"), 1800);
 }
 
-function computeScore(findings) {
-  const penalty = findings.reduce((s, f) => s + (SEV_PENALTY[f.severity] || 0), 0);
-  return Math.max(0, 100 - penalty);
-}
-
 function sevCounts(findings) {
-  const c = { HIGH: 0, MEDIUM: 0, LOW: 0 };
+  const c = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
   findings.forEach((f) => { if (c[f.severity] != null) c[f.severity]++; });
   return c;
 }
@@ -241,15 +238,16 @@ function scoreColor(s) {
 }
 
 function renderScore() {
-  const s = computeScore(state.findings);
+  const hasScore = typeof state.score === "number";
+  const s = hasScore ? state.score : 0;
   const ring = $("ring");
   ring.style.setProperty("--val", s);
   ring.style.setProperty("--col", scoreColor(s));
-  $("scoreNum").textContent = s;
+  $("scoreNum").textContent = hasScore ? s : "–";
   $("scoreNum").style.color = scoreColor(s);
 
   const c = sevCounts(state.findings);
-  $("sevBars").innerHTML = ["HIGH", "MEDIUM", "LOW"]
+  $("sevBars").innerHTML = ["CRITICAL", "HIGH", "MEDIUM", "LOW"]
     .map((k) => `<span class="sev-pill"><span class="dot ${k}"></span>${k} · ${c[k]}</span>`)
     .join("");
   $("mFindings").textContent = state.findings.length;
@@ -316,23 +314,29 @@ function renderFindings() {
 async function load() {
   $("error").innerHTML = "";
   try {
-    const [findings, metrics] = await Promise.all([
+    const [report, metrics] = await Promise.all([
       getJson("dql/findings"),
       getJson("dql/metrics"),
     ]);
-    state.findings = Array.isArray(findings) ? findings : [];
+    state.findings = report.findings || [];
+    state.score = typeof report.score === "number" ? report.score : null;
     state.metrics = metrics;
     renderScore();
     renderMetrics();
     renderFindings();
   } catch (e) {
-    $("error").innerHTML = `<div class="panel err">⚠ Không tải được dữ liệu: ${esc(e.message)}<br/>
-      <span class="sub">Kiểm tra app đang chạy và endpoint /dql/* bật (dql.endpoints.enabled=true).</span></div>`;
+    const notReady = /HTTP 503/.test(e.message);
+    $("error").innerHTML = `<div class="panel err">${notReady
+      ? "⏳ DQL đang phân tích lần đầu — thử Refresh sau vài giây."
+      : "⚠ Không tải được dữ liệu: " + esc(e.message)}<br/>
+      <span class="sub">${notReady
+        ? "Scheduler chạy theo dql.analysis.delay-seconds."
+        : "Kiểm tra app đang chạy và endpoint /dql/* bật (dql.endpoints.enabled=true)."}</span></div>`;
   }
 }
 
 function buildAiContextFallback() {
-  const s = computeScore(state.findings);
+  const s = state.score ?? "?";
   const c = sevCounts(state.findings);
   const m = state.metrics || {};
   const top = state.findings
@@ -342,7 +346,7 @@ function buildAiContextFallback() {
   const lines = [];
   lines.push("# Database Quality Report (DQL)");
   lines.push("");
-  lines.push(`Overall score: ${s}/100  (HIGH ${c.HIGH} · MEDIUM ${c.MEDIUM} · LOW ${c.LOW})`);
+  lines.push(`Overall score: ${s}/100  (CRITICAL ${c.CRITICAL} · HIGH ${c.HIGH} · MEDIUM ${c.MEDIUM} · LOW ${c.LOW})`);
   lines.push(`Total SQL intercepted: ${m.totalQueries ?? "?"} · Slow: ${m.slowCount ?? "?"} · N+1: ${m.nPLusOneCount ?? m.nPlusOneCount ?? "?"}`);
   lines.push("");
   lines.push("## Top findings");

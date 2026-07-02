@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.enums.Severity;
 import org.example.model.Finding;
 import org.example.model.QualityReport;
+import org.example.rules.config.ScoreConfig;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -12,9 +13,16 @@ import java.util.Map;
 
 public class JsonReporter {
 
-    private static final int TOP_FINDINGS = 5;
-
+    private final ScoreConfig scoreConfig;
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public JsonReporter() {
+        this(ScoreConfig.defaults());
+    }
+
+    public JsonReporter(ScoreConfig scoreConfig) {
+        this.scoreConfig = scoreConfig;
+    }
 
     public QualityReport buildReport(
             List<Finding> findings,
@@ -42,7 +50,7 @@ public class JsonReporter {
     private int score(List<Finding> findings) {
         int penaltyScore = 0;
         for(Finding finding : findings) {
-            penaltyScore += finding.severity().getScore();
+            penaltyScore += scoreConfig.weight(finding.severity());
         }
         return Math.max(0, 100 - penaltyScore);
     }
