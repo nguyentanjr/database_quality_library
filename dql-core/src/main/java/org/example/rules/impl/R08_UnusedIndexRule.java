@@ -8,6 +8,7 @@ import org.example.rules.Rule;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class R08_UnusedIndexRule implements Rule {
@@ -50,7 +51,7 @@ public class R08_UnusedIndexRule implements Rule {
                         table.name(),
                         leadingColumn,
                         null,
-                        null
+                        Map.of()
                 ));
             }
         }

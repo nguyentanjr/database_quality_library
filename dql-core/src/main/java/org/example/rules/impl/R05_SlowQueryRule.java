@@ -46,8 +46,8 @@ public class R05_SlowQueryRule implements Rule {
             findings.add(new Finding(
                     ID,
                     SEVERITY,
-                    "Slow query",
-                    "Query exceeded " + threshold + "ms",
+                    "Query exceeded the slow-query threshold",
+                    "Review the execution plan (EXPLAIN) and add a selective index, or reduce the data scanned per query",
                     null,
                     null,
                     acc.getFingerprint(),

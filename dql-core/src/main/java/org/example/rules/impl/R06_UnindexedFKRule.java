@@ -8,6 +8,7 @@ import org.example.rules.Rule;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class R06_UnindexedFKRule implements Rule {
@@ -41,7 +42,7 @@ public class R06_UnindexedFKRule implements Rule {
                             table.name(),
                             column,
                             null,
-                            null
+                            Map.of()
                     ));
                 }
             }

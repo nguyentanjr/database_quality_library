@@ -8,6 +8,7 @@ import org.example.rules.config.MissingIndexConfig;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class R07_MissingIndexRule implements Rule {
@@ -54,7 +55,7 @@ public class R07_MissingIndexRule implements Rule {
                                 table.name(),
                                 column,
                                 null,
-                                null
+                                Map.of()
                         ));
                     }
                 }
