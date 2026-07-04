@@ -29,7 +29,7 @@ public record SuspiciousTypeConfig(List<TypeRule> rules) {
                 new TypeRule(
                         List.of("_at", "_date", "_time", "created", "updated"),
                         Set.of("varchar", "text", "char", "bpchar"),
-                        Severity.MEDIUM,
+                        Severity.HIGH,
                         "Temporal column uses string type",
                         "Use TIMESTAMP, DATE, or TIME instead"
                 )

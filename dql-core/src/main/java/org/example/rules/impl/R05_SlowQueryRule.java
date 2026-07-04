@@ -32,7 +32,7 @@ public class R05_SlowQueryRule implements Rule {
 
         for(QueryExecution queryExecution : queryExecutions) {
             long duration = queryExecution.durationMs();
-            if(duration > config.thresholdMs()) {
+            if(duration >= config.thresholdMs()) {
                 SlowQueryAccumulator acc = slowQueries.computeIfAbsent(queryExecution.fingerprint(),
                         k -> new SlowQueryAccumulator(
                                 queryExecution.fingerprint()

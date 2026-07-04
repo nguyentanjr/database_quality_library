@@ -4,6 +4,7 @@ import org.example.model.Finding;
 import org.example.model.QualityReport;
 import org.example.model.SchemaSnapshot;
 import org.example.report.JsonReporter;
+import org.example.rules.config.ScoreConfig;
 import org.example.rules.AnalysisContext;
 import org.example.rules.impl.R01_MissingPrimaryKeyRule;
 import org.example.rules.impl.R02_SuspiciousTypeRule;
@@ -21,7 +22,7 @@ import java.util.TimeZone;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Testcontainers
-class RuleEngineIT {
+class RuleEngineTest {
 
     static {
         TimeZone.setDefault(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
@@ -69,8 +70,9 @@ class RuleEngineIT {
                 snap.tables().size()
         );
 
+        ScoreConfig scoreConfig = ScoreConfig.defaults();
         int expectedScore = Math.max(0, 100 - findings.stream()
-                .mapToInt(f -> f.severity().getScore())
+                .mapToInt(f -> scoreConfig.weight(f.severity()))
                 .sum());
         assertEquals(expectedScore, report.score());
 

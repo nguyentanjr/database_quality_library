@@ -14,8 +14,11 @@ import net.sf.jsqlparser.util.TablesNamesFinder;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.logging.Logger;
 
 public class StatsAccumulator {
+
+    private static final Logger LOGGER = Logger.getLogger(StatsAccumulator.class.getName());
 
     private final LongAdder count = new LongAdder();
     private final Set<String> tables;
@@ -81,7 +84,7 @@ public class StatsAccumulator {
             }
 
         } catch (JSQLParserException e) {
-            System.out.println("LOG");
+            LOGGER.fine(() -> "DQL fingerprint parse failed: [" + fingerprint + "] -> " + e.getMessage());
         }
 
         return new StatsAccumulator(tables, columns, selectStatement);

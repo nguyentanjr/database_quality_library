@@ -42,7 +42,7 @@ public class AiContextExporter {
             List<QueryExecution> recentExecutions
     ) {
         List<String> schemaSummary = buildSchemaSummary(snapshot);
-        List<Finding> importantFindings = FindingPriority.top(findings, TOP_FINDINGS);
+        List<Finding> importantFindings = FindingPriority.topEnsuringSevere(findings, TOP_FINDINGS);
         List<TableFrequency> mostUsedTables = findMostUsedTables(stats);
         List<String> querySamples = pickQuerySamples(recentExecutions);
 

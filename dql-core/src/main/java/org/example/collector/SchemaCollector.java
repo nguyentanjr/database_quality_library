@@ -13,22 +13,63 @@ public class SchemaCollector {
     public SchemaSnapshot collect(DataSource dataSource) throws SQLException {
         try (Connection connection = dataSource.getConnection()) {
             DatabaseMetaData metaData = connection.getMetaData();
-            List<String> tables = getTables(metaData);
+            MetadataScope scope = resolveScope(connection, metaData);
+            List<String> tables = getTables(metaData, scope);
             List<Table> tableList = new ArrayList<>();
             for (String table : tables) {
                 tableList.add(new Table(table,
-                        getPrimaryKeys(metaData, table),
-                        getColumns(metaData, table),
-                        getForeignKeys(metaData, table),
-                        getIndexes(metaData, table)));
+                        getPrimaryKeys(metaData, scope, table),
+                        getColumns(metaData, scope, table),
+                        getForeignKeys(metaData, scope, table),
+                        getIndexes(metaData, scope, table)));
             }
             return new SchemaSnapshot(tableList);
         }
     }
 
-    private List<String> getTables(DatabaseMetaData metaData) throws SQLException {
+    private MetadataScope resolveScope(Connection connection, DatabaseMetaData metaData) throws SQLException {
+        String product = metaData.getDatabaseProductName().toLowerCase(Locale.ROOT);
+        String catalog = safeCatalog(connection);
+        String schema = safeSchema(connection);
+
+        if (product.contains("mysql") || product.contains("mariadb")) {
+            return new MetadataScope(catalog, null);
+        }
+
+        if (product.contains("postgresql")) {
+            return new MetadataScope(catalog, schema != null ? schema : "public");
+        }
+
+        if (product.contains("h2") || product.contains("hsql")) {
+            return new MetadataScope(catalog, schema != null ? schema : "PUBLIC");
+        }
+
+        if (product.contains("sql server")) {
+            return new MetadataScope(catalog, schema != null ? schema : "dbo");
+        }
+
+        return new MetadataScope(catalog, schema);
+    }
+
+    private String safeCatalog(Connection connection) {
+        try {
+            return connection.getCatalog();
+        } catch (SQLException e) {
+            return null;
+        }
+    }
+
+    private String safeSchema(Connection connection) {
+        try {
+            return connection.getSchema();
+        } catch (SQLException | AbstractMethodError e) {
+            return null;
+        }
+    }
+
+    private List<String> getTables(DatabaseMetaData metaData, MetadataScope scope) throws SQLException {
         List<String> names = new ArrayList<>();
-        try (ResultSet rs = metaData.getTables(null, "public", "%",new String[]{"TABLE"})) {
+        try (ResultSet rs = metaData.getTables(scope.catalog(), scope.schemaPattern(), "%",new String[]{"TABLE"})) {
             while(rs.next()) {
                 names.add(rs.getString("TABLE_NAME"));
             }
@@ -36,9 +77,9 @@ public class SchemaCollector {
         return names;
     }
 
-    private List<Column> getColumns(DatabaseMetaData metaData, String tableName) throws SQLException {
+    private List<Column> getColumns(DatabaseMetaData metaData, MetadataScope scope, String tableName) throws SQLException {
         List<Column> columns = new ArrayList<>();
-        try (ResultSet rs = metaData.getColumns(null, "public", tableName, "%")) {
+        try (ResultSet rs = metaData.getColumns(scope.catalog(), scope.schemaPattern(), tableName, "%")) {
             while(rs.next()) {
                 String name = rs.getString("COLUMN_NAME");
                 String type = rs.getString("TYPE_NAME");
@@ -49,9 +90,9 @@ public class SchemaCollector {
         return columns;
     }
 
-    private List<Index> getIndexes(DatabaseMetaData metaData, String tableName) throws SQLException {
+    private List<Index> getIndexes(DatabaseMetaData metaData, MetadataScope scope, String tableName) throws SQLException {
         Map<String, IndexAccumulator> indexes = new LinkedHashMap<>();
-        try (ResultSet rs = metaData.getIndexInfo(null, "public", tableName, false, false)) {
+        try (ResultSet rs = metaData.getIndexInfo(scope.catalog(), scope.schemaPattern(), tableName, false, false)) {
             while(rs.next()) {
 
                 short type = rs.getShort("TYPE");
@@ -101,11 +142,11 @@ public class SchemaCollector {
         }
     }
 
-    private List<String> getPrimaryKeys(DatabaseMetaData metaData, String tableName) throws SQLException {
+    private List<String> getPrimaryKeys(DatabaseMetaData metaData, MetadataScope scope, String tableName) throws SQLException {
 
         Map<Integer, String> primaryKeys = new TreeMap<>();
 
-        try(ResultSet rs = metaData.getPrimaryKeys(null, "public", tableName)) {
+        try(ResultSet rs = metaData.getPrimaryKeys(scope.catalog(), scope.schemaPattern(), tableName)) {
             while(rs.next()) {
                 String keyName = rs.getString("COLUMN_NAME");
                 int keySeq = rs.getShort("KEY_SEQ");
@@ -117,10 +158,10 @@ public class SchemaCollector {
         return new ArrayList<>(primaryKeys.values());
     }
 
-    private List<ForeignKey> getForeignKeys(DatabaseMetaData metaData, String tableName) throws SQLException {
+    private List<ForeignKey> getForeignKeys(DatabaseMetaData metaData, MetadataScope scope, String tableName) throws SQLException {
         List<ForeignKey> fks = new ArrayList<>();
         Map<String, ForeignAccumulator> foreignKeys = new TreeMap<>();
-        try (ResultSet rs = metaData.getImportedKeys(null, "public", tableName)) {
+        try (ResultSet rs = metaData.getImportedKeys(scope.catalog(), scope.schemaPattern(), tableName)) {
             while (rs.next()) {
                 int keySeq = rs.getShort("KEY_SEQ");
                 String fkName = rs.getString("FK_NAME");
@@ -132,6 +173,9 @@ public class SchemaCollector {
             return fks;
         }
 
+    }
+
+    private record MetadataScope(String catalog, String schemaPattern) {
     }
 
     private static class ForeignAccumulator {
