@@ -1,410 +1,1544 @@
-<!DOCTYPE html>
-<html lang="vi">
+<!doctype html>
+<html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>DQL Dashboard</title>
-<style>
-  :root {
-    --bg: #0f1419;
-    --panel: #1a212b;
-    --panel-2: #222b37;
-    --border: #2c3744;
-    --text: #e6edf3;
-    --muted: #8b98a5;
-    --critical: #db2777;
-    --high: #f85149;
-    --medium: #d29922;
-    --low: #3fb950;
-    --accent: #58a6ff;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    line-height: 1.5;
-  }
-  header {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 16px 24px;
-    border-bottom: 1px solid var(--border);
-    position: sticky;
-    top: 0;
-    background: rgba(15, 20, 25, 0.92);
-    backdrop-filter: blur(8px);
-    z-index: 10;
-    flex-wrap: wrap;
-  }
-  header h1 { font-size: 18px; margin: 0; letter-spacing: 0.5px; }
-  header .sub { color: var(--muted); font-size: 12px; font-weight: normal; }
-  .spacer { flex: 1; }
-  button {
-    background: var(--panel-2);
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 7px 14px;
-    font-size: 13px;
-    cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
-  }
-  button:hover { background: #2c3744; border-color: var(--accent); }
-  button.primary { background: var(--accent); color: #0b1117; border-color: var(--accent); font-weight: 600; }
-  button.primary:hover { filter: brightness(1.1); }
-  label.toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); cursor: pointer; }
-  main { padding: 24px; max-width: 1200px; margin: 0 auto; }
-  .grid { display: grid; gap: 16px; }
-  .cards { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-bottom: 24px; }
-  .panel {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 18px;
-  }
-  .card .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; }
-  .card .value { font-size: 30px; font-weight: 700; margin-top: 4px; }
-  .score-wrap { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
-  .score-ring {
-    --val: 100;
-    --col: var(--low);
-    width: 130px; height: 130px; border-radius: 50%;
-    background: conic-gradient(var(--col) calc(var(--val) * 1%), var(--border) 0);
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-  }
-  .score-ring .inner {
-    width: 104px; height: 104px; border-radius: 50%;
-    background: var(--panel); display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-  }
-  .score-ring .num { font-size: 34px; font-weight: 800; }
-  .score-ring .max { font-size: 11px; color: var(--muted); }
-  .sev-bars { display: flex; gap: 8px; flex-wrap: wrap; }
-  .sev-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 20px; font-size: 12px; border: 1px solid var(--border); }
-  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-  .dot.CRITICAL { background: var(--critical); } .dot.HIGH { background: var(--high); } .dot.MEDIUM { background: var(--medium); } .dot.LOW { background: var(--low); }
-  .section-title { font-size: 14px; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); margin: 0 0 12px; }
-  .two-col { grid-template-columns: 2fr 1fr; align-items: start; }
-  @media (max-width: 820px) { .two-col { grid-template-columns: 1fr; } }
-  .filters { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
-  .chip { padding: 4px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--muted); }
-  .chip.active { background: var(--panel-2); color: var(--text); border-color: var(--accent); }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 10px; border-bottom: 1px solid var(--border); }
-  td { padding: 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
-  tr.finding { cursor: pointer; }
-  tr.finding:hover { background: var(--panel-2); }
-  .sev-tag { font-weight: 700; font-size: 11px; padding: 2px 8px; border-radius: 4px; }
-  .sev-tag.CRITICAL { background: rgba(219,39,119,0.18); color: var(--critical); }
-  .sev-tag.HIGH { background: rgba(248,81,73,0.15); color: var(--high); }
-  .sev-tag.MEDIUM { background: rgba(210,153,34,0.15); color: var(--medium); }
-  .sev-tag.LOW { background: rgba(63,185,80,0.15); color: var(--low); }
-  .rule-id { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--accent); font-size: 12px; }
-  .loc { font-family: ui-monospace, monospace; font-size: 12px; color: var(--muted); }
-  .detail-row td { background: #161c24; color: var(--muted); font-size: 12px; }
-  .detail-row pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, monospace; }
-  .suggestion { color: var(--low); }
-  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-  .bar-row .name { width: 130px; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: ui-monospace, monospace; }
-  .bar-track { flex: 1; background: var(--panel-2); border-radius: 4px; height: 22px; overflow: hidden; }
-  .bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #1f6feb); border-radius: 4px; }
-  .bar-row .cnt { width: 44px; text-align: right; font-size: 13px; font-weight: 600; }
-  .empty { color: var(--muted); font-style: italic; padding: 20px 0; text-align: center; }
-  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--panel-2); border: 1px solid var(--accent); color: var(--text); padding: 10px 18px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
-  .toast.show { opacity: 1; }
-  .err { color: var(--high); }
-  dialog { background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 10px; max-width: 760px; width: 90%; padding: 0; }
-  dialog::backdrop { background: rgba(0,0,0,0.6); }
-  .modal-head { display: flex; align-items: center; padding: 16px 18px; border-bottom: 1px solid var(--border); }
-  .modal-head h3 { margin: 0; font-size: 15px; }
-  .modal-body { padding: 18px; }
-  textarea { width: 100%; height: 320px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-family: ui-monospace, monospace; font-size: 12px; resize: vertical; }
-  .hint { font-size: 12px; color: var(--muted); margin: 0 0 10px; }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DQL Dashboard</title>
+  <style>
+    :root {
+      color-scheme: light;
+
+      --bg: #f3f4f6;
+      --surface: #ffffff;
+      --surface-2: #f8f9fb;
+      --surface-3: #eef1f4;
+
+      --border: #d9dde2;
+      --border-strong: #c6ccd3;
+
+      --text: #171b22;
+      --heading: #0d1016;
+      --muted: #515863;
+      --muted-2: #6b7280;
+
+      --blue: #1f6feb;
+      --blue-weak: #e6eefc;
+      --brand: #ee0033;
+
+      /* Severity / score palette. Names kept for inline styles set in JS. */
+      --pink: #9e2530;   /* CRITICAL */
+      --red: #be3117;    /* HIGH */
+      --yellow: #9c5510; /* MEDIUM */
+      --green: #0a7340;  /* LOW / healthy */
+
+      --track: #e7eaee;
+      --radius: 8px;
+      --radius-sm: 6px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, ui-sans-serif, system-ui, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.55;
+      font-size: 15px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input, textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+    }
+
+    .shell {
+      width: min(1440px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 56px;
+    }
+
+    /* ---- Top bar ---- */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding-bottom: 18px;
+      margin-bottom: 22px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .logo {
+      width: 38px;
+      height: 38px;
+      border-radius: var(--radius-sm);
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.02em;
+      color: #ffffff;
+      background: var(--brand);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 21px;
+      font-weight: 650;
+      letter-spacing: -0.01em;
+      color: var(--heading);
+    }
+
+    .subtitle {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      min-height: 36px;
+      border-radius: var(--radius-sm);
+      padding: 8px 14px;
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      transition: background 0.12s ease, border-color 0.12s ease;
+    }
+
+    .btn:hover {
+      background: var(--surface-3);
+      border-color: var(--muted-2);
+    }
+
+    .btn.primary {
+      color: #ffffff;
+      background: var(--blue);
+      border-color: var(--blue);
+      font-weight: 550;
+    }
+
+    .btn.primary:hover {
+      background: #1a5fce;
+      border-color: #1a5fce;
+    }
+
+    .toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 36px;
+      padding: 7px 13px;
+      border-radius: var(--radius-sm);
+      font-size: 13.5px;
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      user-select: none;
+    }
+
+    .toggle input {
+      accent-color: var(--blue);
+    }
+
+    /* ---- Cards / panels ---- */
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+
+    .panel.pad {
+      padding: 24px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(320px, 1.1fr) minmax(300px, 0.9fr);
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    /* ---- Score ---- */
+    .score-panel {
+      display: grid;
+      grid-template-columns: 164px 1fr;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .ring {
+      --value: 0;
+      --color: var(--green);
+      width: 164px;
+      height: 164px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: conic-gradient(var(--color) calc(var(--value) * 1%), var(--track) 0);
+    }
+
+    .ring-inner {
+      width: 132px;
+      height: 132px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+
+    .score-num {
+      font-size: 46px;
+      line-height: 1;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      text-align: center;
+      color: var(--heading);
+    }
+
+    .score-max {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      text-align: center;
+    }
+
+    .eyebrow {
+      margin: 0 0 7px;
+      color: var(--muted-2);
+      font-size: 11.5px;
+      text-transform: uppercase;
+      font-weight: 650;
+      letter-spacing: 0.09em;
+    }
+
+    .hero-title {
+      margin: 0;
+      font-size: 23px;
+      line-height: 1.2;
+      font-weight: 650;
+      letter-spacing: -0.01em;
+      color: var(--heading);
+    }
+
+    .hero-copy {
+      max-width: 58ch;
+      margin: 9px 0 16px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .score-scale {
+      margin: 16px 0 0;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .score-scale strong {
+      color: var(--heading);
+      font-weight: 600;
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* ---- Pills ---- */
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 28px;
+      padding: 4px 11px;
+      border-radius: var(--radius-sm);
+      color: var(--muted);
+      background: var(--surface-2);
+      border: 1px solid var(--border-strong);
+      font-size: 12.5px;
+      font-weight: 550;
+    }
+
+    .pill.ok { color: var(--green); border-color: #b3ddc6; background: #e9f5ef; }
+    .pill.warn { color: var(--yellow); border-color: #ead0a2; background: #fbf1e0; }
+    .pill.err { color: var(--red); border-color: #ecbfb2; background: #fbe9e2; }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* ---- Metrics ---- */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .metric-card {
+      min-height: 116px;
+      padding: 18px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface-2);
+    }
+
+    .metric-label {
+      color: var(--muted);
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      font-weight: 650;
+    }
+
+    .metric-value {
+      margin-top: 10px;
+      font-size: 32px;
+      line-height: 1;
+      font-weight: 650;
+      letter-spacing: -0.02em;
+      color: var(--heading);
+    }
+
+    .metric-note {
+      margin-top: 8px;
+      color: var(--muted-2);
+      font-size: 12.5px;
+    }
+
+    /* ---- Layout ---- */
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 12.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      font-weight: 650;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .filters {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      min-height: 34px;
+      padding: 7px 13px;
+      border-radius: var(--radius-sm);
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      font-size: 13.5px;
+      font-weight: 500;
+    }
+
+    .chip:hover {
+      background: var(--surface-3);
+    }
+
+    .chip.active {
+      color: var(--blue);
+      border-color: #b9d3fa;
+      background: var(--blue-weak);
+      font-weight: 550;
+    }
+
+    .search {
+      width: min(100%, 280px);
+      min-height: 34px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-strong);
+      background: var(--surface);
+      color: var(--text);
+      padding: 8px 12px;
+      font-size: 13.5px;
+      outline: none;
+    }
+
+    .search:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.12);
+    }
+
+    /* ---- Table ---- */
+    .table-wrap {
+      overflow: auto;
+    }
+
+    table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      padding: 12px 16px;
+      color: var(--muted);
+      background: var(--surface-2);
+      text-align: left;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-size: 11.5px;
+      font-weight: 650;
+      border-bottom: 1px solid var(--border-strong);
+    }
+
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    /* Finding column: message is the primary scan target, suggestion is secondary. */
+    #findingsBody tr.finding td:nth-child(3) > div:first-child {
+      font-size: 15px;
+      font-weight: 550;
+      line-height: 1.45;
+      color: var(--heading);
+    }
+
+    #findingsBody tr.finding td:nth-child(3) > div.muted {
+      font-size: 13px;
+    }
+
+    tr.finding {
+      cursor: pointer;
+      transition: background 0.1s ease;
+    }
+
+    tr.finding:hover {
+      background: var(--surface-2);
+    }
+
+    .sev {
+      display: inline-flex;
+      align-items: center;
+      min-width: 80px;
+      justify-content: center;
+      border-radius: var(--radius-sm);
+      padding: 4px 10px;
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      border: 1px solid transparent;
+    }
+
+    .sev.CRITICAL { color: var(--pink); background: #fbe3e1; border-color: #edb3ac; }
+    .sev.HIGH { color: var(--red); background: #fbe4de; border-color: #eeb6a6; }
+    .sev.MEDIUM { color: var(--yellow); background: #fbeed6; border-color: #eaca8c; }
+    .sev.LOW { color: var(--green); background: #e3f3ea; border-color: #a9d7bf; }
+
+    .rule {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      color: var(--blue);
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .muted { color: var(--muted); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .location { color: var(--muted); font-size: 13px; }
+
+    .detail-row td {
+      background: var(--surface-2);
+      color: var(--muted);
+      padding: 0;
+    }
+
+    .detail-box {
+      display: grid;
+      gap: 10px;
+      padding: 14px 18px;
+      border-left: 3px solid var(--blue);
+    }
+
+    .detail-box code,
+    .detail-box pre,
+    .fp-text {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .detail-box code {
+      color: var(--blue);
+      word-break: break-all;
+    }
+
+    .detail-box pre {
+      margin: 0;
+      padding: 12px;
+      overflow: auto;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .detail-box strong {
+      color: var(--heading);
+      font-weight: 600;
+    }
+
+    .suggestion {
+      color: var(--green);
+    }
+
+    /* ---- Side ---- */
+    .side {
+      display: grid;
+      gap: 18px;
+    }
+
+    .side-body {
+      padding: 16px 20px 20px;
+    }
+
+    .bar-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: minmax(92px, 0.75fr) minmax(120px, 1fr) 46px;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .bar-name {
+      min-width: 0;
+      overflow: hidden;
+      color: var(--text);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12.5px;
+    }
+
+    .track {
+      height: 9px;
+      overflow: hidden;
+      border-radius: 3px;
+      background: var(--surface-3);
+    }
+
+    .fill {
+      display: block;
+      height: 100%;
+      min-width: 3px;
+      border-radius: inherit;
+      background: var(--blue);
+    }
+
+    .count {
+      text-align: right;
+      font-weight: 600;
+      color: var(--text);
+      font-size: 12.5px;
+    }
+
+    .fp-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .fp-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      padding: 11px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface-2);
+    }
+
+    .fp-text {
+      overflow: hidden;
+      color: var(--text);
+      font-size: 11.5px;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+
+    .empty {
+      padding: 22px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 13.5px;
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius-sm);
+      background: var(--surface-2);
+    }
+
+    .banner {
+      display: none;
+      margin-bottom: 18px;
+      padding: 14px 16px;
+      font-size: 14px;
+      color: var(--red);
+      border: 1px solid #e6b3a4;
+      border-radius: var(--radius);
+      background: #fbe9e2;
+    }
+
+    /* ---- Modals ---- */
+    .modal {
+      width: min(920px, calc(100% - 28px));
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius);
+      color: var(--text);
+      background: var(--surface);
+      box-shadow: 0 12px 40px rgba(15, 18, 24, 0.18);
+      padding: 0;
+    }
+
+    /* Fixed header + scrollable body: the head stays outside the scroll container. */
+    .modal[open] {
+      display: flex;
+      flex-direction: column;
+      max-height: min(86vh, 920px);
+    }
+
+    .modal::backdrop {
+      background: rgba(15, 18, 24, 0.42);
+    }
+
+    .modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-shrink: 0;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .modal-head h3 {
+      margin: 0;
+      font-size: 15.5px;
+      font-weight: 600;
+      color: var(--heading);
+    }
+
+    .modal-sub {
+      margin-top: 2px;
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+
+    .modal-body {
+      padding: 16px 18px;
+      overflow: auto;
+    }
+
+    /* AI review: reads like a technical report, not a form control */
+    .modal-review {
+      width: min(960px, calc(100% - 28px));
+      border-radius: 14px;
+    }
+
+    .modal-review .modal-head {
+      padding: 16px 24px;
+    }
+
+    .modal-review .modal-body {
+      padding: 0;
+    }
+
+    textarea,
+    .raw-box {
+      width: 100%;
+      min-height: 340px;
+      padding: 14px;
+      color: var(--text);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      outline: none;
+      resize: vertical;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    textarea:focus {
+      border-color: var(--blue);
+    }
+
+    /* ---- AI review: document typography (GitHub-README style) ---- */
+    .review-box {
+      min-height: 180px;
+      padding: 26px 32px 36px;
+      color: var(--text);
+      font-size: 15.5px;
+      line-height: 1.7;
+      word-break: break-word;
+    }
+
+    .review-box > :first-child { margin-top: 0; }
+    .review-box > :last-child { margin-bottom: 0; }
+
+    .review-box h2 {
+      margin: 26px 0 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      font-size: 19px;
+      font-weight: 650;
+      color: var(--heading);
+    }
+
+    .review-box h3 {
+      margin: 22px 0 8px;
+      font-size: 16.5px;
+      font-weight: 650;
+      color: var(--heading);
+    }
+
+    .review-box h4 {
+      margin: 18px 0 6px;
+      font-size: 15.5px;
+      font-weight: 650;
+      color: var(--heading);
+    }
+
+    .review-box p {
+      margin: 0 0 12px;
+    }
+
+    .review-box ul,
+    .review-box ol {
+      margin: 0 0 14px;
+      padding-left: 26px;
+    }
+
+    .review-box li {
+      margin: 5px 0;
+    }
+
+    .review-box li::marker {
+      color: var(--muted-2);
+    }
+
+    .review-box strong {
+      font-weight: 650;
+      color: var(--heading);
+    }
+
+    .review-box code {
+      padding: 1.5px 6px;
+      border-radius: 4px;
+      background: var(--surface-3);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 13.5px;
+    }
+
+    .review-box pre {
+      margin: 0 0 14px;
+      padding: 14px 16px;
+      overflow-x: auto;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+
+    .review-box pre code {
+      padding: 0;
+      background: none;
+      font-size: 13px;
+      line-height: 1.6;
+      white-space: pre;
+    }
+
+    .review-box hr {
+      margin: 20px 0;
+      border: 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .review-box a {
+      color: var(--blue);
+      text-decoration: none;
+    }
+
+    .review-box a:hover {
+      text-decoration: underline;
+    }
+
+    /* ---- Toast ---- */
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      z-index: 100;
+      transform: translate(-50%, 12px);
+      opacity: 0;
+      pointer-events: none;
+      padding: 10px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      color: #ffffff;
+      background: #1f2937;
+      box-shadow: 0 8px 24px rgba(15, 18, 24, 0.22);
+      transition: opacity 0.16s ease, transform 0.16s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    @media (max-width: 1080px) {
+      .hero,
+      .layout {
+        grid-template-columns: 1fr;
+      }
+      .side {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .side .panel:last-child {
+        grid-column: 1 / -1;
+      }
+    }
+
+    @media (max-width: 740px) {
+      .shell {
+        width: min(100% - 20px, 1440px);
+        padding-top: 16px;
+      }
+      .topbar,
+      .score-panel,
+      .toolbar {
+        align-items: stretch;
+        flex-direction: column;
+      }
+      .brand {
+        align-items: flex-start;
+      }
+      .actions {
+        justify-content: flex-start;
+      }
+      .score-panel {
+        display: flex;
+      }
+      .metric-grid,
+      .side {
+        grid-template-columns: 1fr;
+      }
+      .search {
+        width: 100%;
+      }
+    }
+  </style>
 </head>
 <body>
-<header>
-  <div>
-    <h1>DQL Dashboard <span class="sub">Database Quality Library</span></h1>
-  </div>
-  <div class="spacer"></div>
-  <label class="toggle"><input type="checkbox" id="auto" /> Auto-refresh 5s</label>
-  <button id="aiBtn">Copy AI context</button>
-  <button id="refreshBtn" class="primary">↻ Refresh</button>
-</header>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">DQL</div>
+        <div>
+          <h1>Database Quality Dashboard</h1>
+          <div class="subtitle">Runtime SQL metrics, rule findings, and AI-ready context</div>
+        </div>
+      </div>
+      <div class="actions">
+        <label class="toggle"><input type="checkbox" id="autoRefresh" /> Auto 5s</label>
+        <button class="btn" id="copyContextBtn">AI context</button>
+        <button class="btn" id="aiReviewBtn">AI review</button>
+        <button class="btn primary" id="refreshBtn">Refresh</button>
+      </div>
+    </header>
 
-<main>
-  <div id="error"></div>
+    <div id="errorBanner" class="banner"></div>
 
-  <div class="grid two-col" style="margin-bottom:24px;">
-    <div class="panel">
-      <p class="section-title">Overall score</p>
-      <div class="score-wrap">
-        <div class="score-ring" id="ring">
-          <div class="inner">
-            <span class="num" id="scoreNum">–</span>
-            <span class="max">/ 100</span>
+    <section class="hero">
+      <div class="panel pad score-panel">
+        <div class="ring" id="scoreRing">
+          <div class="ring-inner">
+            <div>
+              <div class="score-num" id="scoreValue">-</div>
+              <div class="score-max">quality score</div>
+            </div>
           </div>
         </div>
         <div>
-          <div class="sev-bars" id="sevBars"></div>
-          <p class="hint" style="margin-top:12px;">
-            Điểm = max(0, 100 − Σ weight severity), lấy trực tiếp từ server.<br/>
-            <span class="sub">Weight cấu hình qua dql.score.weights (mặc định CRITICAL 15 · HIGH 8 · MEDIUM 3 · LOW 1).</span>
+          <p class="eyebrow">Overall status</p>
+          <h2 class="hero-title" id="scoreTitle">Waiting for analysis</h2>
+          <p class="hero-copy" id="scoreCopy">
+            DQL will summarize schema and runtime SQL risks after the first analysis cycle.
+          </p>
+          <div class="status-row" id="severityPills"></div>
+          <p class="score-scale">
+            <strong>Score = 100 − Σ(severity weight)</strong>, clamped at 0. Higher is better — each finding lowers the score by its severity weight.
           </p>
         </div>
       </div>
-    </div>
-    <div class="grid cards">
-      <div class="panel card"><div class="label">Total SQL</div><div class="value" id="mTotal">–</div></div>
-      <div class="panel card"><div class="label">Slow queries</div><div class="value" id="mSlow" style="color:var(--medium)">–</div></div>
-      <div class="panel card"><div class="label">N+1 detected</div><div class="value" id="mNplus" style="color:var(--high)">–</div></div>
-      <div class="panel card"><div class="label">Findings</div><div class="value" id="mFindings">–</div></div>
-    </div>
-  </div>
 
-  <div class="grid two-col">
-    <div class="panel">
-      <p class="section-title">Findings</p>
-      <div class="filters" id="filters">
-        <button class="chip active" data-sev="ALL">All</button>
-        <button class="chip" data-sev="CRITICAL">Critical</button>
-        <button class="chip" data-sev="HIGH">High</button>
-        <button class="chip" data-sev="MEDIUM">Medium</button>
-        <button class="chip" data-sev="LOW">Low</button>
+      <div class="panel pad">
+        <p class="eyebrow">Live metrics</p>
+        <div class="metric-grid">
+          <div class="metric-card">
+            <div class="metric-label">Total SQL</div>
+            <div class="metric-value" id="totalQueries">-</div>
+            <div class="metric-note">intercepted statements</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Slow queries</div>
+            <div class="metric-value" id="slowCount">-</div>
+            <div class="metric-note">above configured threshold</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">N+1</div>
+            <div class="metric-value" id="nPlusOneCount">-</div>
+            <div class="metric-note">detected patterns</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Findings</div>
+            <div class="metric-value" id="findingCount">-</div>
+            <div class="metric-note">rule-based issues</div>
+          </div>
+        </div>
       </div>
-      <table>
-        <thead><tr><th>Severity</th><th>Rule</th><th>Message</th><th>Location</th></tr></thead>
-        <tbody id="findingsBody"></tbody>
-      </table>
-      <div class="empty" id="findingsEmpty" style="display:none;">Chưa có finding nào 🎉</div>
+    </section>
+
+    <section class="layout">
+      <div class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Findings</h2>
+          <span class="pill" id="findingsStatus"><span class="dot"></span>Not loaded</span>
+        </div>
+        <div class="toolbar">
+          <div class="filters" id="filters">
+            <button class="chip active" data-severity="ALL">All</button>
+            <button class="chip" data-severity="CRITICAL">Critical</button>
+            <button class="chip" data-severity="HIGH">High</button>
+            <button class="chip" data-severity="MEDIUM">Medium</button>
+            <button class="chip" data-severity="LOW">Low</button>
+          </div>
+          <input class="search" id="searchInput" placeholder="Search rule, table, message..." />
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Severity</th>
+                <th>Rule</th>
+                <th>Finding</th>
+                <th>Location</th>
+              </tr>
+            </thead>
+            <tbody id="findingsBody"></tbody>
+          </table>
+        </div>
+        <div id="findingsEmpty" class="empty" style="display:none;">No findings match the current filter.</div>
+      </div>
+
+      <aside class="side">
+        <div class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">Metrics API</h2>
+            <span class="pill" id="metricsStatus"><span class="dot"></span>Not loaded</span>
+          </div>
+          <div class="side-body">
+            <div class="muted">Last refresh: <span id="lastRefresh">-</span></div>
+            <div class="status-row" style="margin-top:14px;">
+              <button class="btn" id="copyMetricsBtn">Copy JSON</button>
+              <button class="btn" id="openMetricsBtn">View raw</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h2 class="panel-title">Query types</h2></div>
+          <div class="side-body"><div class="bar-list" id="queryTypes"></div></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h2 class="panel-title">Top tables</h2></div>
+          <div class="side-body"><div class="bar-list" id="topTables"></div></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h2 class="panel-title">Top fingerprints</h2></div>
+          <div class="side-body"><div class="fp-list" id="topFingerprints"></div></div>
+        </div>
+      </aside>
+    </section>
+  </div>
+
+  <dialog class="modal" id="rawModal">
+    <div class="modal-head">
+      <h3 id="rawTitle">Raw JSON</h3>
+      <div class="actions">
+        <button class="btn primary" id="copyRawBtn">Copy</button>
+        <button class="btn" id="closeRawBtn">Close</button>
+      </div>
     </div>
-    <div class="panel">
-      <p class="section-title">Top tables by query frequency</p>
-      <div id="topTables"></div>
+    <div class="modal-body">
+      <textarea id="rawText" readonly></textarea>
     </div>
-  </div>
-</main>
+  </dialog>
 
-<dialog id="aiModal">
-  <div class="modal-head">
-    <h3>AI-ready context</h3>
-    <div class="spacer"></div>
-    <button id="aiCopy" class="primary">Copy</button>
-    <button id="aiClose" style="margin-left:8px;">Close</button>
-  </div>
-  <div class="modal-body">
-    <p class="hint" id="aiHint"></p>
-    <textarea id="aiText" readonly></textarea>
-  </div>
-</dialog>
+  <dialog class="modal modal-review" id="reviewModal">
+    <div class="modal-head">
+      <div>
+        <h3>AI Review</h3>
+        <div class="modal-sub">Model-generated report based on DQL findings and schema context</div>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="copyReviewBtn">Copy</button>
+        <button class="btn" id="closeReviewBtn">Close</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="review-box" id="reviewBox">No review loaded.</div>
+    </div>
+  </dialog>
 
-<div class="toast" id="toast"></div>
+  <div class="toast" id="toast"></div>
 
-<script>
-const SEV_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
-let state = { findings: [], score: null, metrics: null, filter: "ALL" };
-
-const $ = (id) => document.getElementById(id);
-
-async function getJson(path) {
-  const res = await fetch(path, { headers: { Accept: "application/json" } });
-  if (!res.ok) throw new Error(path + " → HTTP " + res.status);
-  return res.json();
-}
-
-function toast(msg) {
-  const t = $("toast");
-  t.textContent = msg;
-  t.classList.add("show");
-  clearTimeout(toast._t);
-  toast._t = setTimeout(() => t.classList.remove("show"), 1800);
-}
-
-function sevCounts(findings) {
-  const c = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 };
-  findings.forEach((f) => { if (c[f.severity] != null) c[f.severity]++; });
-  return c;
-}
-
-function scoreColor(s) {
-  if (s >= 80) return "var(--low)";
-  if (s >= 50) return "var(--medium)";
-  return "var(--high)";
-}
-
-function renderScore() {
-  const hasScore = typeof state.score === "number";
-  const s = hasScore ? state.score : 0;
-  const ring = $("ring");
-  ring.style.setProperty("--val", s);
-  ring.style.setProperty("--col", scoreColor(s));
-  $("scoreNum").textContent = hasScore ? s : "–";
-  $("scoreNum").style.color = scoreColor(s);
-
-  const c = sevCounts(state.findings);
-  $("sevBars").innerHTML = ["CRITICAL", "HIGH", "MEDIUM", "LOW"]
-    .map((k) => `<span class="sev-pill"><span class="dot ${k}"></span>${k} · ${c[k]}</span>`)
-    .join("");
-  $("mFindings").textContent = state.findings.length;
-}
-
-function renderMetrics() {
-  const m = state.metrics || {};
-  $("mTotal").textContent = m.totalQueries ?? "–";
-  $("mSlow").textContent = m.slowCount ?? "–";
-  // record component is nPLusOneCount (capital L) — tolerate both spellings
-  $("mNplus").textContent = m.nPLusOneCount ?? m.nPlusOneCount ?? "–";
-
-  const tt = (m.topTables || []);
-  const max = Math.max(1, ...tt.map((t) => t.count));
-  $("topTables").innerHTML = tt.length
-    ? tt.map((t) => `
-        <div class="bar-row">
-          <span class="name" title="${esc(t.table)}">${esc(t.table)}</span>
-          <span class="bar-track"><span class="bar-fill" style="width:${(t.count / max) * 100}%"></span></span>
-          <span class="cnt">${t.count}</span>
-        </div>`).join("")
-    : `<div class="empty">Chưa có query nào được intercept</div>`;
-}
-
-function esc(s) {
-  return String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-}
-
-function renderFindings() {
-  const body = $("findingsBody");
-  let rows = [...state.findings].sort(
-    (a, b) => (SEV_ORDER[a.severity] ?? 9) - (SEV_ORDER[b.severity] ?? 9)
-  );
-  if (state.filter !== "ALL") rows = rows.filter((f) => f.severity === state.filter);
-
-  $("findingsEmpty").style.display = rows.length ? "none" : "block";
-  body.innerHTML = rows.map((f, i) => {
-    const loc = [f.table, f.column].filter(Boolean).join(".") || (f.fingerprint ? "fp:" + f.fingerprint.slice(0, 8) : "–");
-    const details = f.details && Object.keys(f.details).length
-      ? JSON.stringify(f.details, null, 2) : null;
-    return `
-      <tr class="finding" data-i="${i}">
-        <td><span class="sev-tag ${f.severity}">${f.severity}</span></td>
-        <td><span class="rule-id">${esc(f.ruleId)}</span></td>
-        <td>${esc(f.message)}</td>
-        <td class="loc">${esc(loc)}</td>
-      </tr>
-      <tr class="detail-row" id="detail-${i}" style="display:none;">
-        <td colspan="4">
-          ${f.suggestion ? `<div class="suggestion">💡 ${esc(f.suggestion)}</div>` : ""}
-          ${details ? `<pre>${esc(details)}</pre>` : ""}
-        </td>
-      </tr>`;
-  }).join("");
-
-  body.querySelectorAll("tr.finding").forEach((tr) => {
-    tr.onclick = () => {
-      const d = $("detail-" + tr.dataset.i);
-      if (d) d.style.display = d.style.display === "none" ? "table-row" : "none";
+  <script>
+    const API = {
+      findings: "dql/findings",
+      metrics: "dql/metrics",
+      aiContext: "dql/ai-context",
+      aiReview: "dql/ai-review"
     };
-  });
-}
 
-async function load() {
-  $("error").innerHTML = "";
-  try {
-    const [report, metrics] = await Promise.all([
-      getJson("dql/findings"),
-      getJson("dql/metrics"),
-    ]);
-    state.findings = report.findings || [];
-    state.score = typeof report.score === "number" ? report.score : null;
-    state.metrics = metrics;
-    renderScore();
-    renderMetrics();
-    renderFindings();
-  } catch (e) {
-    const notReady = /HTTP 503/.test(e.message);
-    $("error").innerHTML = `<div class="panel err">${notReady
-      ? "⏳ DQL đang phân tích lần đầu — thử Refresh sau vài giây."
-      : "⚠ Không tải được dữ liệu: " + esc(e.message)}<br/>
-      <span class="sub">${notReady
-        ? "Scheduler chạy theo dql.analysis.delay-seconds."
-        : "Kiểm tra app đang chạy và endpoint /dql/* bật (dql.endpoints.enabled=true)."}</span></div>`;
-  }
-}
+    const SEVERITY_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+    const SEVERITY_COLOR = {
+      CRITICAL: "var(--pink)",
+      HIGH: "var(--red)",
+      MEDIUM: "var(--yellow)",
+      LOW: "var(--green)"
+    };
 
-function buildAiContextFallback() {
-  const s = state.score ?? "?";
-  const c = sevCounts(state.findings);
-  const m = state.metrics || {};
-  const top = state.findings
-    .slice()
-    .sort((a, b) => (SEV_ORDER[a.severity] ?? 9) - (SEV_ORDER[b.severity] ?? 9))
-    .slice(0, 10);
-  const lines = [];
-  lines.push("# Database Quality Report (DQL)");
-  lines.push("");
-  lines.push(`Overall score: ${s}/100  (CRITICAL ${c.CRITICAL} · HIGH ${c.HIGH} · MEDIUM ${c.MEDIUM} · LOW ${c.LOW})`);
-  lines.push(`Total SQL intercepted: ${m.totalQueries ?? "?"} · Slow: ${m.slowCount ?? "?"} · N+1: ${m.nPLusOneCount ?? m.nPlusOneCount ?? "?"}`);
-  lines.push("");
-  lines.push("## Top findings");
-  top.forEach((f) => {
-    const loc = [f.table, f.column].filter(Boolean).join(".");
-    lines.push(`- [${f.severity}] ${f.ruleId}: ${f.message}${loc ? " (" + loc + ")" : ""}`);
-    if (f.suggestion) lines.push(`    → ${f.suggestion}`);
-  });
-  lines.push("");
-  lines.push("## Top tables by query frequency");
-  (m.topTables || []).forEach((t) => lines.push(`- ${t.table}: ${t.count}`));
-  lines.push("");
-  lines.push("Hãy review schema và đề xuất tối ưu query dựa trên các finding trên.");
-  return lines.join("\n");
-}
+    const state = {
+      findings: [],
+      report: null,
+      metrics: null,
+      filter: "ALL",
+      query: "",
+      timer: null,
+      rawPayload: "",
+      reviewRaw: ""
+    };
 
-async function openAiContext() {
-  let text, fromServer = false;
-  try {
-    const res = await fetch("dql/ai-context", { headers: { Accept: "text/plain, application/json" } });
-    if (res.ok) {
-      const ct = res.headers.get("content-type") || "";
-      text = ct.includes("json") ? JSON.stringify(await res.json(), null, 2) : await res.text();
-      fromServer = true;
+    const $ = (id) => document.getElementById(id);
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[char]));
     }
-  } catch (e) { /* ignore, fall back */ }
-  if (!text) text = buildAiContextFallback();
 
-  $("aiText").value = text;
-  $("aiHint").innerHTML = fromServer
-    ? "Nguồn: <code>/dql/ai-context</code> (server)."
-    : "⚠ Endpoint <code>/dql/ai-context</code> chưa có — đang dựng tạm từ findings + metrics ở client. Khi bạn code endpoint thật, dashboard sẽ tự dùng nó.";
-  $("aiModal").showModal();
-}
+    // Minimal Markdown renderer for the AI review (headings, lists, bold, italic,
+    // inline/fenced code, links, hr). Input is HTML-escaped BEFORE parsing, so the
+    // AI response can never inject markup. No external libraries.
+    function renderMarkdown(raw) {
+      const mdInline = (s) => s
+        .replace(/`([^`]+)`/g, "<code>$1</code>")
+        .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+        .replace(/(^|[^*])\*([^\s*][^*]*)\*(?!\*)/g, "$1<em>$2</em>")
+        .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
 
-// wiring
-$("refreshBtn").onclick = load;
-$("filters").onclick = (e) => {
-  const chip = e.target.closest(".chip");
-  if (!chip) return;
-  state.filter = chip.dataset.sev;
-  document.querySelectorAll(".chip").forEach((c) => c.classList.toggle("active", c === chip));
-  renderFindings();
-};
-$("aiBtn").onclick = openAiContext;
-$("aiClose").onclick = () => $("aiModal").close();
-$("aiCopy").onclick = async () => {
-  $("aiText").select();
-  try { await navigator.clipboard.writeText($("aiText").value); } catch (e) { document.execCommand("copy"); }
-  toast("Đã copy AI context");
-};
-let timer = null;
-$("auto").onchange = (e) => {
-  clearInterval(timer);
-  if (e.target.checked) timer = setInterval(load, 5000);
-};
+      const out = [];
+      let list = null;   // "ul" | "ol" while inside a list
+      let para = [];     // pending paragraph lines
+      let code = null;   // pending code-block lines while inside a ``` fence
 
-load();
-</script>
+      const closeList = () => { if (list) { out.push("</" + list + ">"); list = null; } };
+      const flushPara = () => {
+        if (para.length) {
+          out.push("<p>" + mdInline(para.join(" ")) + "</p>");
+          para = [];
+        }
+      };
+
+      for (const line of escapeHtml(raw).split(/\r?\n/)) {
+        if (code !== null) {
+          if (/^\s*```/.test(line)) {
+            out.push("<pre><code>" + code.join("\n") + "</code></pre>");
+            code = null;
+          } else {
+            code.push(line);
+          }
+          continue;
+        }
+        if (/^\s*```/.test(line)) { flushPara(); closeList(); code = []; continue; }
+
+        const heading = line.match(/^(#{1,4})\s+(.*)$/);
+        if (heading) {
+          flushPara(); closeList();
+          const level = Math.min(heading[1].length + 1, 4); // # -> h2, ## -> h3, ### -> h4
+          out.push("<h" + level + ">" + mdInline(heading[2]) + "</h" + level + ">");
+          continue;
+        }
+        if (/^\s*(?:---+|\*\*\*+)\s*$/.test(line)) { flushPara(); closeList(); out.push("<hr />"); continue; }
+        if (/^\s*[-*]\s+/.test(line)) {
+          flushPara();
+          if (list !== "ul") { closeList(); out.push("<ul>"); list = "ul"; }
+          out.push("<li>" + mdInline(line.replace(/^\s*[-*]\s+/, "")) + "</li>");
+          continue;
+        }
+        if (/^\s*\d+[.)]\s+/.test(line)) {
+          flushPara();
+          if (list !== "ol") { closeList(); out.push("<ol>"); list = "ol"; }
+          out.push("<li>" + mdInline(line.replace(/^\s*\d+[.)]\s+/, "")) + "</li>");
+          continue;
+        }
+        if (!line.trim()) { flushPara(); closeList(); continue; }
+        para.push(line.trim());
+      }
+
+      if (code !== null) out.push("<pre><code>" + code.join("\n") + "</code></pre>");
+      flushPara();
+      closeList();
+      return out.join("");
+    }
+
+    async function getJson(path) {
+      const res = await fetch(path, { headers: { Accept: "application/json" } });
+      if (!res.ok) {
+        throw new Error(path + " returned HTTP " + res.status);
+      }
+      return res.json();
+    }
+
+    function showToast(message) {
+      const toast = $("toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toast.classList.remove("show"), 1800);
+    }
+
+    function setBanner(message) {
+      const banner = $("errorBanner");
+      if (!message) {
+        banner.style.display = "none";
+        banner.textContent = "";
+        return;
+      }
+      banner.style.display = "block";
+      banner.textContent = message;
+    }
+
+    function setStatus(id, label, type) {
+      const el = $(id);
+      el.className = "pill" + (type ? " " + type : "");
+      el.innerHTML = `<span class="dot"></span>${escapeHtml(label)}`;
+    }
+
+    function severityCounts(findings) {
+      return findings.reduce((acc, finding) => {
+        const severity = finding.severity || "LOW";
+        acc[severity] = (acc[severity] || 0) + 1;
+        return acc;
+      }, { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 });
+    }
+
+    function scoreColor(score) {
+      if (score >= 80) return "var(--green)";
+      if (score >= 55) return "var(--yellow)";
+      return "var(--red)";
+    }
+
+    function scoreTitle(score) {
+      if (typeof score !== "number") return "Waiting for analysis";
+      if (score >= 85) return "Healthy database interaction";
+      if (score >= 65) return "Needs targeted cleanup";
+      if (score >= 45) return "Risk is accumulating";
+      return "High-risk database interaction";
+    }
+
+    function scoreCopy(score, findings) {
+      if (typeof score !== "number") {
+        return "Run traffic through the application, then refresh this page after the first DQL analysis cycle.";
+      }
+      if (!findings.length) {
+        return "No rule findings are currently reported. Keep watching runtime traffic for query-level risks.";
+      }
+      return "Findings are ranked by severity. Expand any row to inspect fingerprint, evidence, and recommendation.";
+    }
+
+    function renderScore() {
+      const score = state.report && typeof state.report.score === "number" ? state.report.score : null;
+      const value = score ?? 0;
+      const color = scoreColor(value);
+      $("scoreRing").style.setProperty("--value", value);
+      $("scoreRing").style.setProperty("--color", color);
+      $("scoreValue").textContent = score ?? "-";
+      $("scoreValue").style.color = color;
+      $("scoreTitle").textContent = scoreTitle(score);
+      $("scoreCopy").textContent = scoreCopy(score, state.findings);
+
+      const counts = severityCounts(state.findings);
+      $("severityPills").innerHTML = ["CRITICAL", "HIGH", "MEDIUM", "LOW"]
+        .map((severity) => `<span class="pill" style="color:${SEVERITY_COLOR[severity]}"><span class="dot"></span>${severity} ${counts[severity] || 0}</span>`)
+        .join("");
+
+      $("findingCount").textContent = state.findings.length;
+      setStatus("findingsStatus", state.findings.length + " findings", state.findings.length ? "warn" : "ok");
+    }
+
+    function metricValue(name) {
+      return state.metrics && state.metrics[name] != null ? state.metrics[name] : "-";
+    }
+
+    function renderMetrics() {
+      const metrics = state.metrics || {};
+      $("totalQueries").textContent = metricValue("totalQueries");
+      $("slowCount").textContent = metricValue("slowCount");
+      $("nPlusOneCount").textContent = metrics.nPlusOneCount ?? metrics.nPLusOneCount ?? "-";
+      $("lastRefresh").textContent = new Date().toLocaleTimeString();
+
+      renderBars("queryTypes", Object.entries(metrics.queryTypeBreakdown || {}).map(([name, count]) => ({ name, count })));
+      renderBars("topTables", metrics.topTables || [], "table");
+      renderFingerprints(metrics.topFingerprints || []);
+      setStatus("metricsStatus", "200 OK", "ok");
+    }
+
+    function renderBars(targetId, rows, nameKey = "name") {
+      const target = $(targetId);
+      if (!rows.length) {
+        target.innerHTML = `<div class="empty">No data yet.</div>`;
+        return;
+      }
+
+      const max = Math.max(1, ...rows.map((row) => Number(row.count || 0)));
+      target.innerHTML = rows.map((row) => {
+        const name = row[nameKey] ?? row.name ?? "-";
+        const count = Number(row.count || 0);
+        const width = Math.max(4, Math.round((count / max) * 100));
+        return `
+          <div class="bar-row">
+            <div class="bar-name mono" title="${escapeHtml(name)}">${escapeHtml(name)}</div>
+            <div class="track"><span class="fill" style="width:${width}%"></span></div>
+            <div class="count">${count}</div>
+          </div>`;
+      }).join("");
+    }
+
+    function renderFingerprints(rows) {
+      const target = $("topFingerprints");
+      if (!rows.length) {
+        target.innerHTML = `<div class="empty">No captured fingerprint yet.</div>`;
+        return;
+      }
+
+      target.innerHTML = rows.map((row) => `
+        <div class="fp-item">
+          <div class="fp-text" title="${escapeHtml(row.fingerprint)}">${escapeHtml(row.fingerprint)}</div>
+          <div class="count">${Number(row.count || 0)}</div>
+        </div>
+      `).join("");
+    }
+
+    function findingLocation(finding) {
+      const tableColumn = [finding.table, finding.column].filter(Boolean).join(".");
+      if (tableColumn) return tableColumn;
+      if (finding.fingerprint) return "fp:" + finding.fingerprint.slice(0, 12);
+      return "-";
+    }
+
+    function findingSearchText(finding) {
+      return [
+        finding.severity,
+        finding.ruleId,
+        finding.message,
+        finding.suggestion,
+        finding.table,
+        finding.column,
+        finding.fingerprint,
+        JSON.stringify(finding.details || {})
+      ].join(" ").toLowerCase();
+    }
+
+    function filteredFindings() {
+      const query = state.query.trim().toLowerCase();
+      return state.findings
+        .filter((finding) => state.filter === "ALL" || finding.severity === state.filter)
+        .filter((finding) => !query || findingSearchText(finding).includes(query))
+        .sort((a, b) => (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9));
+    }
+
+    function renderFindings() {
+      const rows = filteredFindings();
+      const body = $("findingsBody");
+      $("findingsEmpty").style.display = rows.length ? "none" : "block";
+
+      body.innerHTML = rows.map((finding, index) => {
+        const detailJson = finding.details && Object.keys(finding.details).length
+          ? JSON.stringify(finding.details, null, 2)
+          : "";
+
+        return `
+          <tr class="finding" data-index="${index}">
+            <td><span class="sev ${escapeHtml(finding.severity)}">${escapeHtml(finding.severity || "-")}</span></td>
+            <td><span class="rule">${escapeHtml(finding.ruleId || "-")}</span></td>
+            <td>
+              <div>${escapeHtml(finding.message || "-")}</div>
+              ${finding.suggestion ? `<div class="muted" style="margin-top:5px;">${escapeHtml(finding.suggestion)}</div>` : ""}
+            </td>
+            <td><span class="location mono">${escapeHtml(findingLocation(finding))}</span></td>
+          </tr>
+          <tr class="detail-row" id="detail-${index}" style="display:none;">
+            <td colspan="4">
+              <div class="detail-box">
+                ${finding.fingerprint ? `<div><strong>Fingerprint:</strong> <code>${escapeHtml(finding.fingerprint)}</code></div>` : ""}
+                ${finding.suggestion ? `<div class="suggestion"><strong>Recommendation:</strong> ${escapeHtml(finding.suggestion)}</div>` : ""}
+                ${detailJson ? `<pre>${escapeHtml(detailJson)}</pre>` : `<div class="muted">No extra evidence attached.</div>`}
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join("");
+
+      body.querySelectorAll("tr.finding").forEach((row) => {
+        row.addEventListener("click", () => {
+          const detail = $("detail-" + row.dataset.index);
+          if (!detail) return;
+          detail.style.display = detail.style.display === "none" ? "table-row" : "none";
+        });
+      });
+    }
+
+    async function loadDashboard() {
+      setBanner("");
+      try {
+        const [report, metrics] = await Promise.all([
+          getJson(API.findings),
+          getJson(API.metrics)
+        ]);
+
+        state.report = report || {};
+        state.findings = Array.isArray(report.findings) ? report.findings : [];
+        state.metrics = metrics || {};
+
+        renderScore();
+        renderMetrics();
+        renderFindings();
+      } catch (error) {
+        const message = String(error && error.message ? error.message : error);
+        const notReady = message.includes("HTTP 503");
+        setBanner(notReady
+          ? "DQL analysis is not ready yet. Wait a few seconds, then refresh."
+          : "Cannot load DQL data: " + message);
+        setStatus("metricsStatus", notReady ? "503 Not ready" : "Load error", notReady ? "warn" : "err");
+        setStatus("findingsStatus", notReady ? "Not ready" : "Load error", notReady ? "warn" : "err");
+      }
+    }
+
+    function buildFallbackContext() {
+      const score = state.report && typeof state.report.score === "number" ? state.report.score : "?";
+      const counts = severityCounts(state.findings);
+      const metrics = state.metrics || {};
+      const top = [...state.findings]
+        .sort((a, b) => (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9))
+        .slice(0, 10);
+
+      const lines = [
+        "# DQL database quality context",
+        "",
+        `Score: ${score}/100`,
+        `Findings: CRITICAL ${counts.CRITICAL || 0}, HIGH ${counts.HIGH || 0}, MEDIUM ${counts.MEDIUM || 0}, LOW ${counts.LOW || 0}`,
+        `Total SQL: ${metrics.totalQueries ?? "?"}, Slow: ${metrics.slowCount ?? "?"}, N+1: ${metrics.nPlusOneCount ?? "?"}`,
+        "",
+        "## Top findings"
+      ];
+
+      top.forEach((finding) => {
+        lines.push(`- [${finding.severity}] ${finding.ruleId}: ${finding.message}`);
+        if (finding.table || finding.column) {
+          lines.push(`  Location: ${[finding.table, finding.column].filter(Boolean).join(".")}`);
+        }
+        if (finding.suggestion) {
+          lines.push(`  Recommendation: ${finding.suggestion}`);
+        }
+      });
+
+      lines.push("", "## Top tables");
+      (metrics.topTables || []).forEach((row) => lines.push(`- ${row.table}: ${row.count}`));
+      return lines.join("\n");
+    }
+
+    function openRaw(title, text) {
+      $("rawTitle").textContent = title;
+      $("rawText").value = text;
+      state.rawPayload = text;
+      $("rawModal").showModal();
+    }
+
+    async function openAiContext() {
+      try {
+        const res = await fetch(API.aiContext, { headers: { Accept: "application/json, text/plain" } });
+        if (res.ok) {
+          const type = res.headers.get("content-type") || "";
+          const text = type.includes("json")
+            ? JSON.stringify(await res.json(), null, 2)
+            : await res.text();
+          openRaw("AI-ready context", text);
+          return;
+        }
+      } catch (error) {
+        // Fall back to client-side context below.
+      }
+      openRaw("AI-ready context", buildFallbackContext());
+    }
+
+    async function openAiReview() {
+      state.reviewRaw = "";
+      $("reviewBox").textContent = "Calling /dql/ai-review ...";
+      $("reviewModal").showModal();
+      try {
+        const res = await fetch(API.aiReview, { headers: { Accept: "application/json" } });
+        if (res.status === 404) {
+          $("reviewBox").textContent = "AI review endpoint is not available or AI is disabled.";
+          return;
+        }
+        if (res.status === 503) {
+          $("reviewBox").textContent = "DQL analysis is not ready yet. Try again after the next scheduler run.";
+          return;
+        }
+        if (!res.ok) {
+          $("reviewBox").textContent = "AI review failed with HTTP " + res.status;
+          return;
+        }
+        const data = await res.json();
+        const text = data.review || JSON.stringify(data, null, 2);
+        state.reviewRaw = text;
+        // Markdown review renders as a document; JSON fallback stays a code block.
+        $("reviewBox").innerHTML = data.review
+          ? renderMarkdown(text)
+          : "<pre><code>" + escapeHtml(text) + "</code></pre>";
+      } catch (error) {
+        $("reviewBox").textContent = "Cannot call /dql/ai-review: " + error.message;
+      }
+    }
+
+    async function copyText(text, successMessage) {
+      try {
+        await navigator.clipboard.writeText(text);
+      } catch (error) {
+        const temp = document.createElement("textarea");
+        temp.value = text;
+        temp.style.position = "fixed";
+        temp.style.left = "-9999px";
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand("copy");
+        temp.remove();
+      }
+      showToast(successMessage);
+    }
+
+    $("refreshBtn").addEventListener("click", loadDashboard);
+    $("copyContextBtn").addEventListener("click", openAiContext);
+    $("aiReviewBtn").addEventListener("click", openAiReview);
+    $("openMetricsBtn").addEventListener("click", () => {
+      openRaw("GET /dql/metrics", JSON.stringify(state.metrics || {}, null, 2));
+    });
+    $("copyMetricsBtn").addEventListener("click", () => {
+      copyText(JSON.stringify(state.metrics || {}, null, 2), "Metrics JSON copied");
+    });
+    $("copyRawBtn").addEventListener("click", () => copyText($("rawText").value, "Copied"));
+    $("closeRawBtn").addEventListener("click", () => $("rawModal").close());
+    $("copyReviewBtn").addEventListener("click", () => copyText(state.reviewRaw || $("reviewBox").textContent, "AI review copied"));
+    $("closeReviewBtn").addEventListener("click", () => $("reviewModal").close());
+
+    $("filters").addEventListener("click", (event) => {
+      const chip = event.target.closest(".chip");
+      if (!chip) return;
+      state.filter = chip.dataset.severity;
+      document.querySelectorAll(".chip").forEach((item) => item.classList.toggle("active", item === chip));
+      renderFindings();
+    });
+
+    $("searchInput").addEventListener("input", (event) => {
+      state.query = event.target.value;
+      renderFindings();
+    });
+
+    $("autoRefresh").addEventListener("change", (event) => {
+      clearInterval(state.timer);
+      state.timer = null;
+      if (event.target.checked) {
+        state.timer = setInterval(loadDashboard, 5000);
+      }
+    });
+
+    loadDashboard();
+  </script>
 </body>
 </html>
