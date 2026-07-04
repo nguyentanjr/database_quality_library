@@ -1,4 +1,5 @@
 import org.example.model.Finding;
+import org.example.model.Index;
 import org.example.model.QueryStats;
 import org.example.model.SchemaSnapshot;
 import org.example.model.StatsAccumulator;
@@ -72,6 +73,41 @@ class R07_MissingIndexRuleTest {
         assertEquals(1, findings.size());
         assertEquals("accounts", findings.getFirst().table());
         assertEquals("email", findings.getFirst().column());
+    }
+
+    @Test
+    void does_not_report_when_column_has_leading_index() {
+        Table accounts = new Table(
+                "accounts",
+                List.of("id"),
+                List.of(),
+                List.of(),
+                List.of(new Index("idx_email", List.of("email"), false)));
+        QueryStats stats = new QueryStats(
+                "select * from accounts where email = ?",
+                100,
+                Set.of("accounts"),
+                Set.of("email"),
+                true);
+        AnalysisContext context = new AnalysisContext(
+                new SchemaSnapshot(List.of(accounts)), List.of(stats), List.of());
+
+        assertTrue(new R07_MissingIndexRule(new MissingIndexConfig(1)).analyze(context).isEmpty());
+    }
+
+    @Test
+    void does_not_report_when_count_below_threshold() {
+        QueryStats stats = new QueryStats(
+                "select * from accounts where email = ?",
+                4,
+                Set.of("accounts"),
+                Set.of("email"),
+                true);
+        AnalysisContext context = new AnalysisContext(
+                new SchemaSnapshot(List.of(table("accounts"))), List.of(stats), List.of());
+
+        // threshold 5 > count 4 -> không xét
+        assertTrue(new R07_MissingIndexRule(new MissingIndexConfig(5)).analyze(context).isEmpty());
     }
 
     private Table table(String name) {

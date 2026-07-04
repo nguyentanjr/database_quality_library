@@ -1,5 +1,6 @@
 import org.example.fingerprint.Fingerprinter;
 import org.example.fingerprint.RegexFingerprint;
+import org.example.fingerprint.SqlVerbs;
 import org.example.model.QueryExecution;
 import org.example.model.QueryStats;
 import org.example.rules.config.SlowQueryConfig;
@@ -19,13 +20,15 @@ import java.util.Set;
 import java.util.TimeZone;
 
 import static org.junit.jupiter.api.Assertions.*;
-
 @Testcontainers
-class QueryStatsIT {
+class QueryStatsTest {
 
     static {
         TimeZone.setDefault(TimeZone.getTimeZone("Asia/Ho_Chi_Minh"));
     }
+
+
+    private final Fingerprinter fingerprinter = new RegexFingerprint();
 
     @Container
     static PostgreSQLContainer<?> pg = new PostgreSQLContainer<>("postgres:16")
@@ -41,8 +44,6 @@ class QueryStatsIT {
 
     @Test
     void collects_fingerprint_count_tables_and_columns() throws Exception {
-        Fingerprinter fingerprinter = new RegexFingerprint();
-
         InMemoryExecutionSink sink = new InMemoryExecutionSink(
                 100,
                 fingerprinter,
@@ -67,8 +68,8 @@ class QueryStatsIT {
         );
 
         assertEquals(3, accounts.count());
-        assertEquals(Set.of("accounts"), accounts.tables());
-        assertEquals(Set.of("id"), accounts.columns());
+        assertEquals(Set.of("accounts"), accounts.tables()); //parser
+        assertEquals(Set.of("id"), accounts.columns()); //parser
 
         QueryStats join = findContaining(stats, "join accounts");
 
@@ -79,7 +80,6 @@ class QueryStatsIT {
         assertTrue(join.columns().contains("account_id"));
         assertTrue(join.columns().contains("amount"));
 
-        // a.id trong JOIN ON cũng có thể được visitor thu vào, nên không assert bằng Set.of(...)
         assertTrue(join.columns().contains("id"));
     }
 
@@ -93,12 +93,14 @@ class QueryStatsIT {
 
         long duration = (System.nanoTime() - start) / 1_000_000;
 
+        String fingerprint = fingerprinter.fingerprint(sql);
         QueryExecution queryExecution = new QueryExecution(
                 sql,
                 duration,
                 Instant.now(),
                 null,
-                null,
+                fingerprint,
+                SqlVerbs.isSelect(sql),
                 List.of(),
                 null
         );
