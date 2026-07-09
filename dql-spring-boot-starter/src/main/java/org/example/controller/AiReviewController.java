@@ -32,7 +32,6 @@ public class AiReviewController {
     @GetMapping("/ai-review")
     public synchronized AiReview aiReview() {
         if (aiReviewer == null) {
-            // AI tắt (dql.ai.enabled=false) -> trả gọn, KHÔNG để endpoint biến mất (404/500 stacktrace).
             return new AiReview("AI review is disabled. Set dql.ai.enabled=true and dql.ai.api-key to enable.");
         }
 

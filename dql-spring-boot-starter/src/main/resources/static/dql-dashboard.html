@@ -375,6 +375,56 @@
       flex-wrap: wrap;
     }
 
+    .toolbar.compact {
+      justify-content: flex-end;
+    }
+
+    .view-tabs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 0 0 18px;
+      padding: 4px;
+      width: fit-content;
+      max-width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+
+    .view-tab {
+      min-height: 34px;
+      padding: 7px 13px;
+      border-radius: var(--radius-sm);
+      color: var(--muted);
+      background: transparent;
+      font-size: 13.5px;
+      font-weight: 550;
+      white-space: nowrap;
+    }
+
+    .view-tab:hover {
+      background: var(--surface-3);
+    }
+
+    .view-tab.active {
+      color: var(--blue);
+      background: var(--blue-weak);
+    }
+
+    .view {
+      display: none;
+    }
+
+    .layout.view.active {
+      display: grid;
+    }
+
+    .single-view.view.active {
+      display: block;
+    }
+
     .filters {
       display: flex;
       align-items: center;
@@ -431,6 +481,30 @@
       min-width: 760px;
       border-collapse: collapse;
       font-size: 14px;
+    }
+
+    .wide-table {
+      min-width: 1120px;
+    }
+
+    .findings-table {
+      min-width: 760px;
+      table-layout: fixed;
+    }
+
+    .findings-table th:nth-child(1),
+    .findings-table td:nth-child(1) {
+      width: 118px;
+    }
+
+    .findings-table th:nth-child(2),
+    .findings-table td:nth-child(2) {
+      width: 155px;
+    }
+
+    .findings-table th:nth-child(4),
+    .findings-table td:nth-child(4) {
+      width: 34%;
     }
 
     th {
@@ -502,7 +576,24 @@
 
     .muted { color: var(--muted); }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-    .location { color: var(--muted); font-size: 13px; }
+    .location {
+      display: block;
+      max-width: 100%;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      white-space: normal;
+    }
+
+    .sql-cell,
+    .callsite-cell,
+    .schema-list {
+      max-width: 420px;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
 
     .detail-row td {
       background: var(--surface-2);
@@ -633,6 +724,45 @@
       border: 1px dashed var(--border-strong);
       border-radius: var(--radius-sm);
       background: var(--surface-2);
+    }
+
+    .pager {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 20px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 13px;
+      flex-wrap: wrap;
+    }
+
+    .pager[hidden] {
+      display: none;
+    }
+
+    .pager-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pager .btn {
+      min-height: 32px;
+      padding: 6px 12px;
+    }
+
+    .pager-page {
+      min-width: 86px;
+      text-align: center;
+      color: var(--text);
+      font-weight: 550;
+    }
+
+    .btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
     }
 
     .banner {
@@ -894,6 +1024,13 @@
       .search {
         width: 100%;
       }
+      .pager {
+        align-items: stretch;
+        flex-direction: column;
+      }
+      .pager-actions {
+        justify-content: space-between;
+      }
     }
   </style>
 </head>
@@ -967,7 +1104,13 @@
       </div>
     </section>
 
-    <section class="layout">
+    <nav class="view-tabs" role="tablist" aria-label="DQL views">
+      <button class="view-tab active" data-view="findingsView" role="tab" aria-selected="true">Findings</button>
+      <button class="view-tab" data-view="queriesView" role="tab" aria-selected="false">Collected Queries</button>
+      <button class="view-tab" data-view="schemaView" role="tab" aria-selected="false">Schema Snapshot</button>
+    </nav>
+
+    <section class="layout view active" id="findingsView">
       <div class="panel">
         <div class="panel-head">
           <h2 class="panel-title">Findings</h2>
@@ -984,7 +1127,7 @@
           <input class="search" id="searchInput" placeholder="Search rule, table, message..." />
         </div>
         <div class="table-wrap">
-          <table>
+          <table class="findings-table">
             <thead>
               <tr>
                 <th>Severity</th>
@@ -997,6 +1140,14 @@
           </table>
         </div>
         <div id="findingsEmpty" class="empty" style="display:none;">No findings match the current filter.</div>
+        <div class="pager" id="findingsPager" hidden>
+          <div id="findingsPagerSummary">0 findings</div>
+          <div class="pager-actions">
+            <button class="btn" id="findingsPrev" type="button">Previous</button>
+            <span class="pager-page" id="findingsPageLabel">Page 1 / 1</span>
+            <button class="btn" id="findingsNext" type="button">Next</button>
+          </div>
+        </div>
       </div>
 
       <aside class="side">
@@ -1029,6 +1180,69 @@
           <div class="side-body"><div class="fp-list" id="topFingerprints"></div></div>
         </div>
       </aside>
+    </section>
+
+    <section class="single-view view" id="queriesView">
+      <div class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Collected Queries</h2>
+          <span class="pill" id="queriesStatus"><span class="dot"></span>Not loaded</span>
+        </div>
+        <div class="toolbar compact">
+          <div class="status-row">
+            <button class="btn" id="copyQueriesBtn">Copy JSON</button>
+            <button class="btn" id="openQueriesBtn">View raw</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="wide-table">
+            <thead>
+              <tr>
+                <th>Fingerprint</th>
+                <th>Count</th>
+                <th>Avg</th>
+                <th>Min/Max</th>
+                <th>Tables</th>
+                <th>Type</th>
+                <th>Source location</th>
+                <th>Last seen</th>
+              </tr>
+            </thead>
+            <tbody id="queriesBody"></tbody>
+          </table>
+        </div>
+        <div id="queriesEmpty" class="empty" style="display:none;">No collected queries yet.</div>
+      </div>
+    </section>
+
+    <section class="single-view view" id="schemaView">
+      <div class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Schema Snapshot</h2>
+          <span class="pill" id="schemaStatus"><span class="dot"></span>Not loaded</span>
+        </div>
+        <div class="toolbar compact">
+          <div class="status-row">
+            <button class="btn" id="copySchemaBtn">Copy JSON</button>
+            <button class="btn" id="openSchemaBtn">View raw</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="wide-table">
+            <thead>
+              <tr>
+                <th>Table</th>
+                <th>Primary key</th>
+                <th>Columns</th>
+                <th>Foreign keys</th>
+                <th>Indexes</th>
+              </tr>
+            </thead>
+            <tbody id="schemaBody"></tbody>
+          </table>
+        </div>
+        <div id="schemaEmpty" class="empty" style="display:none;">No schema snapshot loaded.</div>
+      </div>
     </section>
   </div>
 
@@ -1067,6 +1281,8 @@
     const API = {
       findings: "dql/findings",
       metrics: "dql/metrics",
+      collectedQueries: "dql/collected-queries?limit=50",
+      schemaSnapshot: "dql/schema-snapshot",
       aiContext: "dql/ai-context",
       aiReview: "dql/ai-review"
     };
@@ -1083,8 +1299,13 @@
       findings: [],
       report: null,
       metrics: null,
+      collectedQueries: [],
+      schemaSnapshot: null,
       filter: "ALL",
       query: "",
+      findingsPage: 1,
+      findingsPageSize: 10,
+      activeView: "findingsView",
       timer: null,
       rawPayload: "",
       reviewRaw: ""
@@ -1200,6 +1421,22 @@
       el.innerHTML = `<span class="dot"></span>${escapeHtml(label)}`;
     }
 
+    function formatMs(value) {
+      const number = Number(value || 0);
+      if (!Number.isFinite(number)) return "-";
+      return number >= 10 ? Math.round(number) + " ms" : number.toFixed(1) + " ms";
+    }
+
+    function formatInstant(value) {
+      if (!value) return "-";
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? "-" : date.toLocaleString();
+    }
+
+    function listText(values) {
+      return Array.isArray(values) && values.length ? values.join(", ") : "-";
+    }
+
     function severityCounts(findings) {
       return findings.reduce((acc, finding) => {
         const severity = finding.severity || "LOW";
@@ -1305,9 +1542,68 @@
       `).join("");
     }
 
+    function renderCollectedQueries() {
+      const rows = state.collectedQueries || [];
+      const body = $("queriesBody");
+      $("queriesEmpty").style.display = rows.length ? "none" : "block";
+      setStatus("queriesStatus", rows.length + " fingerprints", rows.length ? "ok" : "");
+
+      body.innerHTML = rows.map((row) => {
+        const tables = Array.isArray(row.tables) ? row.tables : [];
+        const isSelect = row.isSelect ?? row.select;
+        return `
+          <tr>
+            <td><div class="sql-cell mono" title="${escapeHtml(row.fingerprint)}">${escapeHtml(row.fingerprint || "-")}</div></td>
+            <td><strong>${Number(row.count || 0)}</strong></td>
+            <td>${escapeHtml(formatMs(row.avgMs))}</td>
+            <td>${escapeHtml(formatMs(row.minMs))} / ${escapeHtml(formatMs(row.maxMs))}</td>
+            <td><div class="schema-list">${escapeHtml(listText(tables))}</div></td>
+            <td>${isSelect ? "SELECT" : "OTHER"}</td>
+            <td><div class="callsite-cell mono" title="${escapeHtml(row.topSourceLocation)}">${escapeHtml(row.topSourceLocation || "-")}</div></td>
+            <td>${escapeHtml(formatInstant(row.lastSeen))}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function renderSchemaSnapshot() {
+      const tables = state.schemaSnapshot && Array.isArray(state.schemaSnapshot.tables)
+        ? state.schemaSnapshot.tables
+        : [];
+      const body = $("schemaBody");
+      $("schemaEmpty").style.display = tables.length ? "none" : "block";
+      setStatus("schemaStatus", tables.length + " tables", tables.length ? "ok" : "");
+
+      body.innerHTML = tables.map((table) => {
+        const columns = (table.columns || []).map((column) => {
+          const nullable = column.nullable ? "" : " not null";
+          return `${column.name} ${column.type}${nullable}`;
+        });
+        const foreignKeys = (table.foreignKeys || []).map((fk) =>
+          `${fk.column} -> ${fk.refTable}.${fk.refColumn}`
+        );
+        const indexes = (table.indexes || []).map((index) => {
+          const cols = Array.isArray(index.indexColumns) ? index.indexColumns.join(", ") : "";
+          const unique = index.unique ? " unique" : "";
+          return `${index.indexName}(${cols})${unique}`;
+        });
+
+        return `
+          <tr>
+            <td><span class="rule">${escapeHtml(table.name || "-")}</span></td>
+            <td><div class="schema-list mono">${escapeHtml(listText(table.primaryKey || []))}</div></td>
+            <td><div class="schema-list">${escapeHtml(listText(columns))}</div></td>
+            <td><div class="schema-list">${escapeHtml(listText(foreignKeys))}</div></td>
+            <td><div class="schema-list">${escapeHtml(listText(indexes))}</div></td>
+          </tr>
+        `;
+      }).join("");
+    }
+
     function findingLocation(finding) {
       const tableColumn = [finding.table, finding.column].filter(Boolean).join(".");
       if (tableColumn) return tableColumn;
+      if (finding.details && finding.details.sourceLocation) return finding.details.sourceLocation;
       if (finding.fingerprint) return "fp:" + finding.fingerprint.slice(0, 12);
       return "-";
     }
@@ -1320,6 +1616,7 @@
         finding.suggestion,
         finding.table,
         finding.column,
+        findingLocation(finding),
         finding.fingerprint,
         JSON.stringify(finding.details || {})
       ].join(" ").toLowerCase();
@@ -1333,27 +1630,48 @@
         .sort((a, b) => (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9));
     }
 
+    function renderFindingsPager(totalRows, totalPages, startIndex, endIndex) {
+      const pager = $("findingsPager");
+      const shouldShow = totalRows > state.findingsPageSize;
+      pager.hidden = !shouldShow;
+      if (!shouldShow) return;
+
+      $("findingsPagerSummary").textContent = `${startIndex + 1}-${endIndex} of ${totalRows} findings`;
+      $("findingsPageLabel").textContent = `Page ${state.findingsPage} / ${totalPages}`;
+      $("findingsPrev").disabled = state.findingsPage <= 1;
+      $("findingsNext").disabled = state.findingsPage >= totalPages;
+    }
+
     function renderFindings() {
       const rows = filteredFindings();
       const body = $("findingsBody");
       $("findingsEmpty").style.display = rows.length ? "none" : "block";
 
-      body.innerHTML = rows.map((finding, index) => {
+      const totalPages = Math.max(1, Math.ceil(rows.length / state.findingsPageSize));
+      state.findingsPage = Math.min(Math.max(1, state.findingsPage), totalPages);
+      const startIndex = (state.findingsPage - 1) * state.findingsPageSize;
+      const pageRows = rows.slice(startIndex, startIndex + state.findingsPageSize);
+      const endIndex = startIndex + pageRows.length;
+      renderFindingsPager(rows.length, totalPages, startIndex, endIndex);
+
+      body.innerHTML = pageRows.map((finding, index) => {
         const detailJson = finding.details && Object.keys(finding.details).length
           ? JSON.stringify(finding.details, null, 2)
           : "";
+        const rowIndex = startIndex + index;
+        const location = findingLocation(finding);
 
         return `
-          <tr class="finding" data-index="${index}">
+          <tr class="finding" data-detail-id="detail-${rowIndex}">
             <td><span class="sev ${escapeHtml(finding.severity)}">${escapeHtml(finding.severity || "-")}</span></td>
             <td><span class="rule">${escapeHtml(finding.ruleId || "-")}</span></td>
             <td>
               <div>${escapeHtml(finding.message || "-")}</div>
               ${finding.suggestion ? `<div class="muted" style="margin-top:5px;">${escapeHtml(finding.suggestion)}</div>` : ""}
             </td>
-            <td><span class="location mono">${escapeHtml(findingLocation(finding))}</span></td>
+            <td><span class="location mono" title="${escapeHtml(location)}">${escapeHtml(location)}</span></td>
           </tr>
-          <tr class="detail-row" id="detail-${index}" style="display:none;">
+          <tr class="detail-row" id="detail-${rowIndex}" style="display:none;">
             <td colspan="4">
               <div class="detail-box">
                 ${finding.fingerprint ? `<div><strong>Fingerprint:</strong> <code>${escapeHtml(finding.fingerprint)}</code></div>` : ""}
@@ -1367,7 +1685,7 @@
 
       body.querySelectorAll("tr.finding").forEach((row) => {
         row.addEventListener("click", () => {
-          const detail = $("detail-" + row.dataset.index);
+          const detail = $(row.dataset.detailId);
           if (!detail) return;
           detail.style.display = detail.style.display === "none" ? "table-row" : "none";
         });
@@ -1376,28 +1694,58 @@
 
     async function loadDashboard() {
       setBanner("");
-      try {
-        const [report, metrics] = await Promise.all([
-          getJson(API.findings),
-          getJson(API.metrics)
-        ]);
+      const [reportResult, metricsResult, queriesResult, schemaResult] = await Promise.allSettled([
+        getJson(API.findings),
+        getJson(API.metrics),
+        getJson(API.collectedQueries),
+        getJson(API.schemaSnapshot)
+      ]);
 
-        state.report = report || {};
+      const errors = [];
+
+      if (reportResult.status === "fulfilled") {
+        const report = reportResult.value || {};
+        state.report = report;
         state.findings = Array.isArray(report.findings) ? report.findings : [];
-        state.metrics = metrics || {};
-
         renderScore();
-        renderMetrics();
         renderFindings();
-      } catch (error) {
-        const message = String(error && error.message ? error.message : error);
+      } else {
+        const message = String(reportResult.reason && reportResult.reason.message ? reportResult.reason.message : reportResult.reason);
         const notReady = message.includes("HTTP 503");
-        setBanner(notReady
-          ? "DQL analysis is not ready yet. Wait a few seconds, then refresh."
-          : "Cannot load DQL data: " + message);
-        setStatus("metricsStatus", notReady ? "503 Not ready" : "Load error", notReady ? "warn" : "err");
         setStatus("findingsStatus", notReady ? "Not ready" : "Load error", notReady ? "warn" : "err");
+        errors.push(notReady ? "DQL analysis is not ready yet" : message);
       }
+
+      if (metricsResult.status === "fulfilled") {
+        state.metrics = metricsResult.value || {};
+        renderMetrics();
+      } else {
+        const message = String(metricsResult.reason && metricsResult.reason.message ? metricsResult.reason.message : metricsResult.reason);
+        const notReady = message.includes("HTTP 503");
+        setStatus("metricsStatus", notReady ? "503 Not ready" : "Load error", notReady ? "warn" : "err");
+        errors.push(message);
+      }
+
+      if (queriesResult.status === "fulfilled") {
+        state.collectedQueries = Array.isArray(queriesResult.value) ? queriesResult.value : [];
+        renderCollectedQueries();
+      } else {
+        const message = String(queriesResult.reason && queriesResult.reason.message ? queriesResult.reason.message : queriesResult.reason);
+        setStatus("queriesStatus", "Load error", "err");
+        errors.push(message);
+      }
+
+      if (schemaResult.status === "fulfilled") {
+        state.schemaSnapshot = schemaResult.value || {};
+        renderSchemaSnapshot();
+      } else {
+        const message = String(schemaResult.reason && schemaResult.reason.message ? schemaResult.reason.message : schemaResult.reason);
+        const notReady = message.includes("HTTP 503");
+        setStatus("schemaStatus", notReady ? "503 Not ready" : "Load error", notReady ? "warn" : "err");
+        errors.push(message);
+      }
+
+      setBanner(errors.length ? "Some DQL data could not load: " + [...new Set(errors)].join(" | ") : "");
     }
 
     function buildFallbackContext() {
@@ -1512,21 +1860,61 @@
     $("copyMetricsBtn").addEventListener("click", () => {
       copyText(JSON.stringify(state.metrics || {}, null, 2), "Metrics JSON copied");
     });
+    $("openQueriesBtn").addEventListener("click", () => {
+      openRaw("GET /dql/collected-queries", JSON.stringify(state.collectedQueries || [], null, 2));
+    });
+    $("copyQueriesBtn").addEventListener("click", () => {
+      copyText(JSON.stringify(state.collectedQueries || [], null, 2), "Collected queries JSON copied");
+    });
+    $("openSchemaBtn").addEventListener("click", () => {
+      openRaw("GET /dql/schema-snapshot", JSON.stringify(state.schemaSnapshot || {}, null, 2));
+    });
+    $("copySchemaBtn").addEventListener("click", () => {
+      copyText(JSON.stringify(state.schemaSnapshot || {}, null, 2), "Schema snapshot JSON copied");
+    });
     $("copyRawBtn").addEventListener("click", () => copyText($("rawText").value, "Copied"));
     $("closeRawBtn").addEventListener("click", () => $("rawModal").close());
     $("copyReviewBtn").addEventListener("click", () => copyText(state.reviewRaw || $("reviewBox").textContent, "AI review copied"));
     $("closeReviewBtn").addEventListener("click", () => $("reviewModal").close());
+    $("findingsPrev").addEventListener("click", () => {
+      if (state.findingsPage <= 1) return;
+      state.findingsPage -= 1;
+      renderFindings();
+    });
+    $("findingsNext").addEventListener("click", () => {
+      const totalPages = Math.max(1, Math.ceil(filteredFindings().length / state.findingsPageSize));
+      if (state.findingsPage >= totalPages) return;
+      state.findingsPage += 1;
+      renderFindings();
+    });
+
+    document.querySelectorAll(".view-tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        const viewId = tab.dataset.view;
+        state.activeView = viewId;
+        document.querySelectorAll(".view-tab").forEach((item) => {
+          const active = item === tab;
+          item.classList.toggle("active", active);
+          item.setAttribute("aria-selected", String(active));
+        });
+        document.querySelectorAll(".view").forEach((view) => {
+          view.classList.toggle("active", view.id === viewId);
+        });
+      });
+    });
 
     $("filters").addEventListener("click", (event) => {
       const chip = event.target.closest(".chip");
       if (!chip) return;
       state.filter = chip.dataset.severity;
+      state.findingsPage = 1;
       document.querySelectorAll(".chip").forEach((item) => item.classList.toggle("active", item === chip));
       renderFindings();
     });
 
     $("searchInput").addEventListener("input", (event) => {
       state.query = event.target.value;
+      state.findingsPage = 1;
       renderFindings();
     });
 

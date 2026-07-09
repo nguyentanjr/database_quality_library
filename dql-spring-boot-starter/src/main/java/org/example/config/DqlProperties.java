@@ -1,6 +1,7 @@
 package org.example.config;
 
-    import org.example.enums.Severity;
+import org.example.callsite.SourceLocationConfig;
+import org.example.enums.Severity;
 import org.example.rules.config.FullScanConfig;
 import org.example.rules.config.NPlusOneConfig;
 import org.example.rules.config.NullableRiskConfig;
@@ -46,7 +47,8 @@ public class DqlProperties {
 
     private AiContextExport aiContext = new AiContextExport();
 
-    // dql.rules.<id>: false để tắt rule (id = Rule.id(), vd R08_UnusedIndex). Trống = bật hết.
+    private SourceLocation sourceLocation = new SourceLocation();
+
     private Map<String, Boolean> rules = new HashMap<>();
 
     public boolean isEnabled() {
@@ -151,6 +153,14 @@ public class DqlProperties {
 
     public void setAiContext(AiContextExport aiContext) {
         this.aiContext = aiContext;
+    }
+
+    public SourceLocation getSourceLocation() {
+        return sourceLocation;
+    }
+
+    public void setSourceLocation(SourceLocation sourceLocation) {
+        this.sourceLocation = sourceLocation == null ? new SourceLocation() : sourceLocation;
     }
 
     public Map<String, Boolean> getRules() {
@@ -349,7 +359,6 @@ public class DqlProperties {
     }
 
     public static class Score {
-        // Weight (điểm trừ) mỗi severity. Mutable copy để Spring override từng key.
         private Map<Severity, Integer> weights = new EnumMap<>(ScoreConfig.defaults().weights());
 
         public Map<Severity, Integer> getWeights() {
@@ -362,7 +371,6 @@ public class DqlProperties {
     }
 
     public static class SuspiciousType {
-        // Trống = auto-config dùng SuspiciousTypeConfig.defaults(). Set = thay thế toàn bộ.
         private List<TypeRule> rules = new ArrayList<>();
 
         public List<TypeRule> getRules() {
@@ -449,6 +457,45 @@ public class DqlProperties {
 
         public void setTopTables(int topTables) {
             this.topTables = topTables;
+        }
+    }
+
+    public static class SourceLocation {
+        private boolean enabled = SourceLocationConfig.defaults().enabled();
+        private List<String> applicationPrefixes = new ArrayList<>();
+        private List<String> extraInternalPrefixes = new ArrayList<>();
+        private int maxDepth = SourceLocationConfig.defaults().maxDepth();
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public List<String> getApplicationPrefixes() {
+            return applicationPrefixes;
+        }
+
+        public void setApplicationPrefixes(List<String> applicationPrefixes) {
+            this.applicationPrefixes = applicationPrefixes == null ? new ArrayList<>() : applicationPrefixes;
+        }
+
+        public List<String> getExtraInternalPrefixes() {
+            return extraInternalPrefixes;
+        }
+
+        public void setExtraInternalPrefixes(List<String> extraInternalPrefixes) {
+            this.extraInternalPrefixes = extraInternalPrefixes == null ? new ArrayList<>() : extraInternalPrefixes;
+        }
+
+        public int getMaxDepth() {
+            return maxDepth;
+        }
+
+        public void setMaxDepth(int maxDepth) {
+            this.maxDepth = maxDepth;
         }
     }
 }

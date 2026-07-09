@@ -100,7 +100,9 @@ public class DqlAnalysisScheduler {
 
         AnalysisContext context = new AnalysisContext(snapshot, stats, recent);
 
+        long analysisStartNanos = System.nanoTime();
         List<Finding> findings = ruleEngine.run(context);
+        long analysisMicros = (System.nanoTime() - analysisStartNanos) / 1_000;
 
         QualityReport report = jsonReporter.buildReport(
                 findings,
@@ -119,10 +121,13 @@ public class DqlAnalysisScheduler {
         lastRun = Instant.now();
         lastProcessedSeq = currentSeq;
 
-        log.debug(
-                "DQL analysis completed at seq={}, findings={}",
-                currentSeq,
-                findings.size()
+        log.info(
+                "DQL analysis: ruleEngine={} us, fingerprints={}, recentExec={}, findings={}, score={}",
+                analysisMicros,
+                stats.size(),
+                recent.size(),
+                findings.size(),
+                report.score()
         );
     }
 

@@ -1,10 +1,19 @@
 package org.example;
 
 
+import org.example.adapter.MariaDbExplainAdapter;
+import org.example.adapter.MySqlExplainAdapter;
 import org.example.adapter.PostgresExplainAdapter;
+import org.example.adapter.SqlServerExplainAdapter;
+import org.example.ai.AiReviewer;
+import org.example.ai.HttpAiReviewer;
 import org.example.analyzer.RuleEngine;
+import org.example.callsite.SourceLocationConfig;
 import org.example.config.DqlProperties;
+import org.example.config.WebConfig;
+import org.example.controller.AiReviewController;
 import org.example.controller.DqlReportController;
+import org.example.controller.DqlTransparencyController;
 import org.example.controller.MetricController;
 import org.example.explain.ExplainAdapter;
 import org.example.fingerprint.Fingerprinter;
@@ -16,7 +25,9 @@ import org.example.rules.config.FullScanConfig;
 import org.example.rules.config.MissingIndexConfig;
 import org.example.rules.config.NPlusOneConfig;
 import org.example.rules.config.NullableRiskConfig;
+import org.example.rules.config.ScoreConfig;
 import org.example.rules.config.SlowQueryConfig;
+import org.example.rules.config.SuspiciousTypeConfig;
 import org.example.rules.impl.R01_MissingPrimaryKeyRule;
 import org.example.rules.impl.R02_SuspiciousTypeRule;
 import org.example.rules.impl.R03_NullableRiskRule;
@@ -39,13 +50,19 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 
 import javax.sql.DataSource;
+import java.sql.Connection;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 
 @AutoConfiguration
 @EnableConfigurationProperties(DqlProperties.class)
+@Import(WebConfig.class)
 @ConditionalOnProperty(
         prefix = "dql",
         name = "enabled",
@@ -55,33 +72,71 @@ import java.util.List;
 public class DqlAutoConfiguration {
 
     @Bean
+    @ConditionalOnMissingBean
     public SchemaSnapshotProvider schemaSnapshotProvider(DataSource dataSource) {
         return new SchemaSnapshotProvider(dataSource);
     }
 
     @Bean
+    @ConditionalOnMissingBean(Fingerprinter.class)
     public Fingerprinter fingerprinter() {
         return new RegexFingerprint();
     }
 
     @Bean
+    @ConditionalOnMissingBean(ExecutionSink.class)
     public ExecutionSink executionSink(Fingerprinter fingerprinter, DqlProperties properties) {
         return new InMemoryExecutionSink(
-                100,
+                properties.getSink().getRingCapacity(),
                 fingerprinter,
-                1999,
+                properties.getSink().getMaxFingerprints(),
                 new SlowQueryConfig(properties.getSlowQueries().getThresholdMs())
         );
     }
 
     @Bean
+    @ConditionalOnMissingBean(ExplainAdapter.class)
     public ExplainAdapter explainAdapter(DataSource dataSource) {
-        return new PostgresExplainAdapter(dataSource);
+        // Auto-detect: đổi DB (URL) không cần sửa code/config. Vẫn override được (CoMB).
+        String product = detectDatabaseProduct(dataSource);
+        if (product != null && product.contains("mariadb")) {
+            return new MariaDbExplainAdapter(dataSource);
+        }
+        if (product != null && product.contains("mysql")) {
+            return new MySqlExplainAdapter(dataSource);
+        }
+        if (product != null && product.contains("sql server")) {
+            return new SqlServerExplainAdapter(dataSource);
+        }
+        return new PostgresExplainAdapter(dataSource); // default
+    }
+
+    private static String detectDatabaseProduct(DataSource dataSource) {
+        try (Connection connection = dataSource.getConnection()) {
+            return connection.getMetaData().getDatabaseProductName().toLowerCase(Locale.ROOT);
+        } catch (Exception e) {
+            // Detect fail (vd DB chưa sẵn lúc khởi động) -> dùng default, KHÔNG chặn app start.
+            return null;
+        }
     }
 
     @Bean
-    public static DqlBeanPostProcessor dqlBeanPostProcessor(ObjectProvider<ExecutionSink> sinks, Fingerprinter fingerprinter) {
-        return new DqlBeanPostProcessor(sinks, fingerprinter);
+    public static DqlBeanPostProcessor dqlBeanPostProcessor(
+            ObjectProvider<ExecutionSink> sinks,
+            Fingerprinter fingerprinter,
+            DqlProperties properties
+    ) {
+        DqlProperties.SourceLocation sourceLocation = properties.getSourceLocation();
+        return new DqlBeanPostProcessor(
+                sinks,
+                fingerprinter,
+                new SourceLocationConfig(
+                        sourceLocation.isEnabled(),
+                        sourceLocation.getApplicationPrefixes(),
+                        sourceLocation.getExtraInternalPrefixes(),
+                        sourceLocation.getMaxDepth()
+                )
+        );
     }
 
     @Bean
@@ -90,13 +145,29 @@ public class DqlAutoConfiguration {
     }
 
     @Bean
-    public R02_SuspiciousTypeRule suspiciousTypeRule() {
-        return new R02_SuspiciousTypeRule();
+    public R02_SuspiciousTypeRule suspiciousTypeRule(DqlProperties properties) {
+        List<DqlProperties.SuspiciousType.TypeRule> propRules = properties.getSuspiciousType().getRules();
+        SuspiciousTypeConfig config = propRules.isEmpty()
+                ? SuspiciousTypeConfig.defaults()
+                : new SuspiciousTypeConfig(
+                propRules.stream()
+                        .map(r -> new SuspiciousTypeConfig.TypeRule(
+                                r.getColumns(),
+                                r.getBadTypes(),
+                                r.getSeverity(),
+                                r.getMessage(),
+                                r.getSuggestion()
+                        ))
+                        .toList()
+        );
+        return new R02_SuspiciousTypeRule(config);
     }
 
     @Bean
-    public R03_NullableRiskRule nullableRiskRule() {
-        return new R03_NullableRiskRule(NullableRiskConfig.defaults());
+    public R03_NullableRiskRule nullableRiskRule(DqlProperties properties) {
+        return new R03_NullableRiskRule(
+                new NullableRiskConfig(properties.getNullableRisk().getColumnNameRules())
+        );
     }
 
     @Bean
@@ -143,17 +214,29 @@ public class DqlAutoConfiguration {
     }
 
     @Bean
-    public R10_FullScanTableRule fullScanTableRule(ExplainAdapter explainAdapter) {
+    public R10_FullScanTableRule fullScanTableRule(ExplainAdapter explainAdapter, DqlProperties properties) {
         return new R10_FullScanTableRule(
                 explainAdapter,
-                FullScanConfig.defaults()
+                new FullScanConfig(
+                        properties.getFullScan().getMinEstimatedRows(),
+                        properties.getFullScan().getMaxExplainCandidates()
+                )
         );
     }
 
     @Bean
     @ConditionalOnMissingBean
-    public RuleEngine ruleEngine(List<Rule> rules) {
-        return new RuleEngine(rules);
+    public RuleEngine ruleEngine(List<Rule> rules, DqlProperties properties) {
+        Set<String> disabled = properties.getRules().entrySet().stream()
+                .filter(entry -> Boolean.FALSE.equals(entry.getValue()))
+                .map(entry -> entry.getKey().toLowerCase())
+                .collect(Collectors.toSet());
+
+        List<Rule> active = rules.stream()
+                .filter(rule -> !disabled.contains(rule.id().toLowerCase()))
+                .toList();
+
+        return new RuleEngine(active);
     }
 
     @Bean
@@ -214,17 +297,78 @@ public class DqlAutoConfiguration {
         return new MetricController(executionSink, nPlusOneRule);
     }
 
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    @ConditionalOnProperty(
+            prefix = "dql.endpoints",
+            name = "enabled",
+            havingValue = "true",
+            matchIfMissing = true
+    )
+    public DqlTransparencyController dqlTransparencyController(
+            ExecutionSink executionSink,
+            SchemaSnapshotProvider schemaSnapshotProvider
+    ) {
+        return new DqlTransparencyController(executionSink, schemaSnapshotProvider);
+    }
+
 
     @Bean
-    public JsonReporter jsonReporter() {
-        return new JsonReporter();
+    @ConditionalOnMissingBean
+    public JsonReporter jsonReporter(DqlProperties properties) {
+        return new JsonReporter(new ScoreConfig(properties.getScore().getWeights()));
     }
 
     @Bean
-    public AiContextExporter aiContextExporter() {
-        return new AiContextExporter();
+    @ConditionalOnMissingBean
+    public AiContextExporter aiContextExporter(DqlProperties properties) {
+        return new AiContextExporter(
+                properties.getAiContext().getTopFindings(),
+                properties.getAiContext().getSampleQueries(),
+                properties.getAiContext().getTopTables()
+        );
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(AiReviewer.class)
+    @ConditionalOnProperty(
+            prefix = "dql.ai",
+            name = "enabled",
+            havingValue = "true"
+    )
+    public AiReviewer aiReviewer(DqlProperties properties) {
+        DqlProperties.Ai ai = properties.getAi();
+        if (ai.getApiKey() == null || ai.getApiKey().isBlank()) {
+            throw new IllegalStateException(
+                    "dql.ai.enabled=true but dql.ai.api-key is blank — set it via env var (e.g. ${DQL_AI_API_KEY})"
+            );
+        }
+        return new HttpAiReviewer(
+                ai.getEndpoint(),
+                ai.getApiKey(),
+                ai.getModel(),
+                ai.getTimeoutMs()
+        );
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnBean(DqlAnalysisScheduler.class)
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    @ConditionalOnProperty(
+            prefix = "dql.endpoints",
+            name = "enabled",
+            havingValue = "true",
+            matchIfMissing = true
+    )
+    public AiReviewController aiReviewController(
+            DqlAnalysisScheduler scheduler,
+            ObjectProvider<AiReviewer> aiReviewer
+    ) {
+        // Endpoint LUÔN có (web+endpoints+scheduler). AI tắt -> AiReviewer null -> controller trả "disabled".
+        return new AiReviewController(scheduler, aiReviewer.getIfAvailable());
     }
 
 
 }
-
