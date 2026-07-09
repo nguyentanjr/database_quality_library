@@ -11,7 +11,7 @@ public record QueryExecution(
         String fingerprint,
         boolean select,
         List<List<QueryParam>> paramSets,
-        String stackTrace
+        String sourceLocation
 ) {
 
 

@@ -9,6 +9,7 @@ import org.example.rules.config.SlowQueryConfig;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.time.Instant;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
@@ -47,6 +48,10 @@ public class InMemoryExecutionSink implements ExecutionSink{
         }
 
         String fingerprint = execution.fingerprint();
+        if (fingerprint == null || fingerprint.isBlank()) {
+            skipQuery.increment();
+            return;
+        }
 
         StatsAccumulator statsAccumulator = stats.get(fingerprint);
         if (statsAccumulator == null) {
@@ -60,7 +65,12 @@ public class InMemoryExecutionSink implements ExecutionSink{
             );
         }
 
-        statsAccumulator.recordHit();
+        Instant timestamp = execution.timestamp();
+        statsAccumulator.recordHit(
+                execution.durationMs(),
+                execution.sourceLocation(),
+                timestamp == null ? 0 : timestamp.toEpochMilli()
+        );
     }
 
     public long slowQueryCount() {
@@ -98,9 +108,22 @@ public class InMemoryExecutionSink implements ExecutionSink{
                     acc.getCount().sum(),
                     Set.copyOf(acc.getTables()),
                     Set.copyOf(acc.getColumns()),
-                    acc.isSelect()));
+                    acc.isSelect(),
+                    averageMs(acc),
+                    acc.getMinDurationMs(),
+                    acc.getMaxDurationMs(),
+                    acc.topSourceLocation(),
+                    acc.getLastSeenEpochMs() <= 0 ? null : Instant.ofEpochMilli(acc.getLastSeenEpochMs())));
         }
         return result;
+    }
+
+    private double averageMs(StatsAccumulator acc) {
+        long count = acc.getCount().sum();
+        if (count == 0) {
+            return 0;
+        }
+        return (double) acc.getTotalDurationMs() / count;
     }
 
 }

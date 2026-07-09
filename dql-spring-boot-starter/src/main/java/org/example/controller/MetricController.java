@@ -1,5 +1,7 @@
 package org.example.controller;
 
+import org.example.fingerprint.SqlVerbs;
+import org.example.model.FingerprintFrequency;
 import org.example.model.MetricResult;
 import org.example.model.QueryStats;
 import org.example.model.TableFrequency;
@@ -12,8 +14,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @RestController
@@ -44,7 +49,41 @@ public class MetricController {
         long totalQueries = executionSink.totalQuery();
         AnalysisContext context = new AnalysisContext(null, null, executionSink.recentExecutions());
         long nPlusOneCount = r09NPlusOneRule.analyze(context).size();
-        return new MetricResult(slowCount, nPlusOneCount, totalQueries, topTables(executionSink.stats()));
+
+        List<QueryStats> stats = executionSink.stats();
+        return new MetricResult(
+                slowCount,
+                nPlusOneCount,
+                totalQueries,
+                topTables(stats),
+                topFingerprints(stats),
+                queryTypeBreakdown(stats)
+        );
+    }
+
+    public List<FingerprintFrequency> topFingerprints(List<QueryStats> stats) {
+        return stats.stream()
+                .sorted(Comparator.comparingLong(QueryStats::count).reversed())
+                .limit(5)
+                .map(s -> new FingerprintFrequency(s.fingerprint(), s.count()))
+                .toList();
+    }
+
+    public Map<String, Long> queryTypeBreakdown(List<QueryStats> stats) {
+        Map<String, Long> breakdown = new LinkedHashMap<>();
+        for (String verb : List.of("SELECT", "INSERT", "UPDATE", "DELETE")) {
+            breakdown.put(verb, 0L);
+        }
+        for (QueryStats stat : stats) {
+            breakdown.merge(verbOf(stat.fingerprint()), stat.count(), Long::sum);
+        }
+        return breakdown;
+    }
+
+    private String verbOf(String fingerprint) {
+        // Dùng chung SqlVerbs với BPP để CTE ("with ... select") đếm vào SELECT thay vì OTHER.
+        String verb = SqlVerbs.mainVerb(fingerprint);
+        return verb == null ? "OTHER" : verb.toUpperCase(Locale.ROOT);
     }
 
 

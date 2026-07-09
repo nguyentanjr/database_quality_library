@@ -3,6 +3,7 @@ package org.example.adapter;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.explain.ExplainAdapter;
+import org.example.fingerprint.SqlVerbs;
 import org.example.model.ExplainResult;
 import org.example.model.QueryExecution;
 import org.example.model.QueryParam;
@@ -72,9 +73,12 @@ public class MySqlExplainAdapter implements ExplainAdapter {
 
     private boolean isSafeSelect(String sql) {
         String lower = sql.toLowerCase(Locale.ROOT);
-        return lower.length() > "select".length()
+        boolean plainSelect = lower.length() > "select".length()
                 && lower.startsWith("select")
-                && Character.isWhitespace(lower.charAt("select".length()))
+                && Character.isWhitespace(lower.charAt("select".length()));
+        // CTE: chỉ WITH ... SELECT (đọc). SqlVerbs phân biệt với WITH ... INSERT (data-modifying) -> loại.
+        boolean cteSelect = lower.startsWith("with") && SqlVerbs.isSelect(sql);
+        return (plainSelect || cteSelect)
                 && !lower.contains(";")
                 && !FOR_UPDATE_PATTERN.matcher(lower).find();
     }

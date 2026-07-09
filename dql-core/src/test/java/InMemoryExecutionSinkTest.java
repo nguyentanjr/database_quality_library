@@ -1,6 +1,7 @@
 import org.example.fingerprint.Fingerprinter;
 import org.example.fingerprint.RegexFingerprint;
 import org.example.model.QueryExecution;
+import org.example.model.QueryStats;
 import org.example.rules.config.SlowQueryConfig;
 import org.example.storage.InMemoryExecutionSink;
 import org.junit.jupiter.api.Test;
@@ -19,6 +20,11 @@ class InMemoryExecutionSinkTest {
         // Contract production: BPP tính fingerprint TRƯỚC khi accept.
         return new QueryExecution(sql, 1, Instant.now(), "ctx",
                 fingerprinter.fingerprint(sql), true, List.of(), null);
+    }
+
+    private QueryExecution exec(String sql, long durationMs, String sourceLocation) {
+        return new QueryExecution(sql, durationMs, Instant.now(), "ctx",
+                fingerprinter.fingerprint(sql), true, List.of(), sourceLocation);
     }
 
     @Test
@@ -59,5 +65,24 @@ class InMemoryExecutionSinkTest {
         assertTrue(sink.stats().isEmpty());
         assertEquals(1, sink.totalSkipQuery());
         assertEquals(1, sink.recentExecutions().size());
+    }
+
+    @Test
+    void stats_include_duration_bounds_and_top_source_location() {
+        InMemoryExecutionSink sink = new InMemoryExecutionSink(
+                10, fingerprinter, 10, SlowQueryConfig.defaults());
+
+        sink.accept(exec("select * from t where id = 1", 10, "com.demo.Service.load(Service.java:10)"));
+        sink.accept(exec("select * from t where id = 2", 20, "com.demo.Service.load(Service.java:10)"));
+        sink.accept(exec("select * from t where id = 3", 30, "com.demo.Other.load(Other.java:20)"));
+
+        QueryStats stats = sink.stats().getFirst();
+
+        assertEquals(3, stats.count());
+        assertEquals(20.0, stats.avgMs());
+        assertEquals(10, stats.minMs());
+        assertEquals(30, stats.maxMs());
+        assertEquals("com.demo.Service.load(Service.java:10)", stats.topSourceLocation());
+        assertTrue(stats.lastSeen() != null);
     }
 }
