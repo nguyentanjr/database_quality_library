@@ -20,6 +20,10 @@ class R09_NPlusOneRuleTest {
     private final NPlusOneConfig config = new NPlusOneConfig(3, 2);
 
     private QueryExecution query(String contextId, Object paramValue, boolean select) {
+        return query(contextId, paramValue, select, null);
+    }
+
+    private QueryExecution query(String contextId, Object paramValue, boolean select, String sourceLocation) {
         return new QueryExecution(
                 "select * from pet where owner_id = " + paramValue,
                 1,
@@ -28,7 +32,7 @@ class R09_NPlusOneRuleTest {
                 FP,
                 select,
                 List.of(List.of(new QueryParam(1, paramValue))),
-                null);
+                sourceLocation);
     }
 
     @Test
@@ -48,6 +52,23 @@ class R09_NPlusOneRuleTest {
         assertEquals(1, f.details().get("requestsAffected"));
         assertEquals(3, f.details().get("maxCount"));
         assertEquals(3, f.details().get("maxDistinctParams"));
+    }
+
+    @Test
+    void attaches_most_common_source_location_as_evidence() {
+        List<QueryExecution> execs = List.of(
+                query("req-1", 10, true, "com.demo.VetServiceImpl.toDto(VetServiceImpl.java:85)"),
+                query("req-1", 20, true, "com.demo.VetServiceImpl.toDto(VetServiceImpl.java:85)"),
+                query("req-1", 30, true, "com.demo.OtherService.load(OtherService.java:42)"));
+        AnalysisContext ctx = new AnalysisContext(null, List.of(), execs);
+
+        List<Finding> findings = new R09_NPlusOneRule(config).analyze(ctx);
+
+        assertEquals(1, findings.size());
+        assertEquals(
+                "com.demo.VetServiceImpl.toDto(VetServiceImpl.java:85)",
+                findings.getFirst().details().get("sourceLocation")
+        );
     }
 
     @Test

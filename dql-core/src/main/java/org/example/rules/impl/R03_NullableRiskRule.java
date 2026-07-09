@@ -14,7 +14,9 @@ import java.util.stream.Collectors;
 
 public class R03_NullableRiskRule implements Rule {
     public static final String ID = "R03_NullableRisk";
-    public static final Severity SEVERITY = Severity.MEDIUM;
+    // Nullable-FK: quan hệ bắt buộc mà cho phép NULL -> rủi ro integrity, xếp HIGH
+    // (cao hơn "important column nullable" theo config = MEDIUM). Chỉ dùng cho nhánh FK.
+    public static final Severity SEVERITY = Severity.HIGH;
 
     private final NullableRiskConfig config;
 

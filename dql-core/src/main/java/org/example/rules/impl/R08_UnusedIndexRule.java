@@ -43,6 +43,12 @@ public class R08_UnusedIndexRule implements Rule {
                     continue;
                 }
 
+                // indexName để phân biệt nhiều index unused trên cùng bảng/leading column.
+                // Map.of ném NPE nếu value null -> guard (SchemaCollector đảm bảo non-null nhưng thủ contract).
+                Map<String, Object> details = index.indexName() == null
+                        ? Map.of()
+                        : Map.of("indexName", index.indexName());
+
                 findings.add(new Finding(
                         ID,
                         SEVERITY,
@@ -51,7 +57,7 @@ public class R08_UnusedIndexRule implements Rule {
                         table.name(),
                         leadingColumn,
                         null,
-                        Map.of()
+                        details
                 ));
             }
         }

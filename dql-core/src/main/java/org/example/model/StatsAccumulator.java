@@ -12,18 +12,30 @@ import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.util.TablesNamesFinder;
 
 import java.util.HashSet;
+import java.util.Comparator;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.LongAccumulator;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.logging.Logger;
 
 public class StatsAccumulator {
 
     private static final Logger LOGGER = Logger.getLogger(StatsAccumulator.class.getName());
+    private static final int MAX_SOURCE_LOCATION_KEYS = 20;
 
     private final LongAdder count = new LongAdder();
+    private final LongAdder totalDurationMs = new LongAdder();
+    private final LongAccumulator minDurationMs = new LongAccumulator(Long::min, Long.MAX_VALUE);
+    private final LongAccumulator maxDurationMs = new LongAccumulator(Long::max, Long.MIN_VALUE);
+    private final ConcurrentHashMap<String, LongAdder> sourceLocationCounts = new ConcurrentHashMap<>();
+    private final AtomicInteger sourceLocationKeyCount = new AtomicInteger();
     private final Set<String> tables;
     private final Set<String> columns;
     private final boolean select;
+    private volatile long lastSeenEpochMs;
 
     public StatsAccumulator(Set<String> tables, Set<String> columns) {
         this(tables, columns, false);
@@ -49,6 +61,31 @@ public class StatsAccumulator {
 
     public boolean isSelect() {
         return select;
+    }
+
+    public long getTotalDurationMs() {
+        return totalDurationMs.sum();
+    }
+
+    public long getMinDurationMs() {
+        long value = minDurationMs.get();
+        return value == Long.MAX_VALUE ? 0 : value;
+    }
+
+    public long getMaxDurationMs() {
+        long value = maxDurationMs.get();
+        return value == Long.MIN_VALUE ? 0 : value;
+    }
+
+    public long getLastSeenEpochMs() {
+        return lastSeenEpochMs;
+    }
+
+    public String topSourceLocation() {
+        return sourceLocationCounts.entrySet().stream()
+                .max(Comparator.comparingLong(entry -> entry.getValue().sum()))
+                .map(Map.Entry::getKey)
+                .orElse(null);
     }
 
     public static StatsAccumulator parseFrom(String fingerprint) {
@@ -90,8 +127,52 @@ public class StatsAccumulator {
         return new StatsAccumulator(tables, columns, selectStatement);
     }
 
-    public void recordHit() {
+    public void recordHit(long durationMs, String sourceLocation, long seenAtEpochMs) {
         this.count.increment();
+        this.totalDurationMs.add(durationMs);
+        this.minDurationMs.accumulate(durationMs);
+        this.maxDurationMs.accumulate(durationMs);
+        if (seenAtEpochMs > 0) {
+            this.lastSeenEpochMs = seenAtEpochMs;
+        }
+        recordSourceLocation(sourceLocation);
+    }
+
+    private void recordSourceLocation(String sourceLocation) {
+        if (sourceLocation == null || sourceLocation.isBlank()) {
+            return;
+        }
+
+        LongAdder existing = sourceLocationCounts.get(sourceLocation);
+        if (existing != null) {
+            existing.increment();
+            return;
+        }
+
+        if (!reserveSourceLocationSlot()) {
+            return;
+        }
+
+        LongAdder fresh = new LongAdder();
+        LongAdder raced = sourceLocationCounts.putIfAbsent(sourceLocation, fresh);
+        if (raced == null) {
+            fresh.increment();
+        } else {
+            sourceLocationKeyCount.decrementAndGet();
+            raced.increment();
+        }
+    }
+
+    private boolean reserveSourceLocationSlot() {
+        while (true) {
+            int current = sourceLocationKeyCount.get();
+            if (current >= MAX_SOURCE_LOCATION_KEYS) {
+                return false;
+            }
+            if (sourceLocationKeyCount.compareAndSet(current, current + 1)) {
+                return true;
+            }
+        }
     }
 
     private static String normalize(String name) {

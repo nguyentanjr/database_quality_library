@@ -43,7 +43,7 @@ public class R09_NPlusOneRule implements Rule {
                 summaries.computeIfAbsent(
                         key.fingerprint(),
                         R09Summary::new
-                ).add(count, distinctParams);
+                ).add(count, distinctParams, acc.sourceLocationCounts);
             }
         }
 
@@ -57,19 +57,25 @@ public class R09_NPlusOneRule implements Rule {
         Map<Key, NPlusOneAccumulator> groups  = new HashMap<>();
         for(QueryExecution execution : recentExecutions) {
             if (execution.contextId() == null || execution.fingerprint() == null) continue;
+            if (!execution.select()) continue; // N+1 là pattern đọc lặp; bỏ write (INSERT/UPDATE/DELETE)
+
+            List<List<QueryParam>> queryParams = execution.paramSets();
+            if (queryParams == null || queryParams.isEmpty()) {
+                continue;
+            }
+
             Key key = new Key(execution.contextId(), execution.fingerprint());
             NPlusOneAccumulator acc =  groups.computeIfAbsent(key, k -> new NPlusOneAccumulator());
 
-            List<List<QueryParam>> queryParams = execution.paramSets();
             boolean hasParam = false;
             for(List<QueryParam> list : queryParams) {
-                if (list.isEmpty()) continue;
+                if (list == null || list.isEmpty()) continue;
 
                 hasParam = true;
 
                 List<String> values = new ArrayList<>();
                 for(QueryParam queryParam : list) {
-                     values.add(queryParam.value().toString());
+                     values.add(queryParam == null ? "null" : String.valueOf(queryParam.value()));
                 }
 
                 String paramKey = String.join("|", values);
@@ -77,6 +83,7 @@ public class R09_NPlusOneRule implements Rule {
             }
             if (hasParam) {
                 acc.incrementCount();
+                acc.addSourceLocation(execution.sourceLocation());
             }
         }
        return groups ;
@@ -92,6 +99,7 @@ public class R09_NPlusOneRule implements Rule {
     private static class NPlusOneAccumulator {
         private int count = 0;
         private Set<String> distinctParamKeys = new HashSet<>();
+        private Map<String, Integer> sourceLocationCounts = new HashMap<>();
 
         public void incrementCount() {
             this.count++;
@@ -99,6 +107,13 @@ public class R09_NPlusOneRule implements Rule {
 
         public void addParamKey(String key) {
             distinctParamKeys.add(key);
+        }
+
+        public void addSourceLocation(String sourceLocation) {
+            if (sourceLocation == null || sourceLocation.isBlank()) {
+                return;
+            }
+            sourceLocationCounts.merge(sourceLocation, 1, Integer::sum);
         }
 
         public int getCount() {
@@ -112,18 +127,27 @@ public class R09_NPlusOneRule implements Rule {
         private int requestsAffected = 0;
         private int maxCount = 0;
         private int maxDistinctParams = 0;
+        private final Map<String, Integer> sourceLocationCounts = new HashMap<>();
 
         R09Summary(String fingerprint) {
             this.fingerprint = fingerprint;
         }
 
-        void add(int count, int distinctParams) {
+        void add(int count, int distinctParams, Map<String, Integer> callSites) {
             this.requestsAffected++;
             this.maxCount = Math.max(maxCount, count);
             this.maxDistinctParams = Math.max(maxDistinctParams, distinctParams);
+            callSites.forEach((sourceLocation, calls) -> sourceLocationCounts.merge(sourceLocation, calls, Integer::sum));
         }
 
         Finding toFinding() {
+            Map<String, Object> details = new LinkedHashMap<>();
+            details.put("requestsAffected", requestsAffected);
+            details.put("maxCount", maxCount);
+            details.put("maxDistinctParams", maxDistinctParams);
+
+            topSourceLocation().ifPresent(sourceLocation -> details.put("sourceLocation", sourceLocation));
+
             return new Finding(
                     ID,
                     SEVERITY,
@@ -132,12 +156,14 @@ public class R09_NPlusOneRule implements Rule {
                     null,
                     null,
                     fingerprint,
-                    Map.of(
-                            "requestsAffected", requestsAffected,
-                            "maxCount", maxCount,
-                            "maxDistinctParams", maxDistinctParams
-                    )
+                    details
             );
+        }
+
+        private Optional<String> topSourceLocation() {
+            return sourceLocationCounts.entrySet().stream()
+                    .max(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey);
         }
     }
 }
