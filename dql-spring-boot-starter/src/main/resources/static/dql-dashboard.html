@@ -765,6 +765,224 @@
       opacity: 0.45;
     }
 
+    .xray-grid {
+      display: grid;
+      grid-template-columns: minmax(250px, 0.85fr) minmax(0, 1.35fr) minmax(260px, 0.95fr);
+      min-height: 520px;
+      border-top: 1px solid var(--border);
+    }
+
+    .xray-column {
+      min-width: 0;
+      border-right: 1px solid var(--border);
+    }
+
+    .xray-column:last-child {
+      border-right: 0;
+    }
+
+    .xray-heading {
+      padding: 14px 18px 10px;
+      color: var(--muted);
+      font-size: 11.5px;
+      font-weight: 650;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .xray-list,
+    .xray-timeline,
+    .xray-evidence {
+      display: grid;
+      gap: 10px;
+      min-width: 0;
+      padding: 0 16px 18px;
+    }
+
+    .xray-request {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      background: var(--surface);
+      text-align: left;
+    }
+
+    .xray-request:hover {
+      background: var(--surface-2);
+    }
+
+    .xray-request.active {
+      border-color: #b9d3fa;
+      background: var(--blue-weak);
+    }
+
+    .xray-title {
+      color: var(--heading);
+      font-size: 13.5px;
+      font-weight: 650;
+      overflow-wrap: anywhere;
+    }
+
+    .xray-meta {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .xray-badges {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      margin-top: 9px;
+    }
+
+    .xray-badge,
+    .xray-flag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      border: 1px solid var(--border-strong);
+      color: var(--muted);
+      background: var(--surface-2);
+      font-size: 11.5px;
+      font-weight: 600;
+    }
+
+    .xray-badge.risk,
+    .xray-flag.risk {
+      color: var(--red);
+      border-color: #eeb6a6;
+      background: #fbe4de;
+    }
+
+    .xray-badge.warn,
+    .xray-flag.warn {
+      color: var(--yellow);
+      border-color: #eaca8c;
+      background: #fbeed6;
+    }
+
+    .xray-event {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: start;
+      min-width: 0;
+      padding: 11px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+    }
+
+    .xray-event > div {
+      min-width: 0;
+    }
+
+    .xray-event.risk {
+      border-color: #eeb6a6;
+      background: #fff7f4;
+    }
+
+    .xray-event.warn {
+      border-color: #eaca8c;
+      background: #fff9ec;
+    }
+
+    .xray-order {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: var(--muted);
+      background: var(--surface-3);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .xray-fingerprint {
+      color: var(--heading);
+      font-size: 12.5px;
+      line-height: 1.55;
+      overflow-wrap: anywhere;
+    }
+
+    .xray-source {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 11.5px;
+      overflow-wrap: anywhere;
+    }
+
+    .xray-duration {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+      white-space: nowrap;
+    }
+
+    .xray-card {
+      min-width: 0;
+      max-width: 100%;
+      padding: 13px 14px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      overflow: hidden;
+    }
+
+    .xray-card.risk {
+      border-color: #eeb6a6;
+      background: #fff7f4;
+    }
+
+    .xray-card-title {
+      color: var(--heading);
+      font-size: 13.5px;
+      font-weight: 650;
+      overflow-wrap: anywhere;
+    }
+
+    .xray-facts {
+      display: grid;
+      gap: 5px;
+      min-width: 0;
+      margin-top: 10px;
+      color: var(--text);
+      font-size: 12.5px;
+    }
+
+    .xray-facts > div {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .xray-facts span {
+      color: var(--muted);
+    }
+
+    .xray-facts .mono {
+      color: var(--text);
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .xray-note {
+      padding: 10px 12px;
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius-sm);
+      color: var(--muted);
+      background: var(--surface-2);
+      font-size: 12.5px;
+      line-height: 1.5;
+    }
+
     .banner {
       display: none;
       margin-bottom: 18px;
@@ -1031,6 +1249,16 @@
       .pager-actions {
         justify-content: space-between;
       }
+      .xray-grid {
+        grid-template-columns: 1fr;
+      }
+      .xray-column {
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .xray-column:last-child {
+        border-bottom: 0;
+      }
     }
   </style>
 </head>
@@ -1106,8 +1334,9 @@
 
     <nav class="view-tabs" role="tablist" aria-label="DQL views">
       <button class="view-tab active" data-view="findingsView" role="tab" aria-selected="true">Findings</button>
+      <button class="view-tab" data-view="xrayView" role="tab" aria-selected="false">Request X-Ray</button>
       <button class="view-tab" data-view="queriesView" role="tab" aria-selected="false">Collected Queries</button>
-      <button class="view-tab" data-view="schemaView" role="tab" aria-selected="false">Schema Snapshot</button>
+      <button class="view-tab" data-view="schemaView" role="tab" aria-selected="false">Schema</button>
     </nav>
 
     <section class="layout view active" id="findingsView">
@@ -1180,6 +1409,41 @@
           <div class="side-body"><div class="fp-list" id="topFingerprints"></div></div>
         </div>
       </aside>
+    </section>
+
+    <section class="single-view view" id="xrayView">
+      <div class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Request X-Ray</h2>
+          <span class="pill" id="xrayStatus"><span class="dot"></span>Not loaded</span>
+        </div>
+        <div class="toolbar compact">
+          <div class="status-row">
+            <button class="btn primary" id="xrayRunNPlusOneBtn">Run N+1 demo</button>
+            <button class="btn" id="xrayRunDupBtn">Run duplicate demo</button>
+            <button class="btn" id="xrayRunVetsBtn">Run /api/vets</button>
+          </div>
+          <div class="status-row">
+            <button class="btn" id="xrayRefreshBtn">Refresh X-Ray</button>
+            <button class="btn" id="openXrayBtn">View raw</button>
+          </div>
+        </div>
+        <div class="xray-grid">
+          <div class="xray-column">
+            <div class="xray-heading">Recent Requests</div>
+            <div class="xray-list" id="xrayRequests"></div>
+          </div>
+          <div class="xray-column">
+            <div class="xray-heading">SQL Timeline</div>
+            <div class="xray-timeline" id="xrayTimeline"></div>
+          </div>
+          <div class="xray-column">
+            <div class="xray-heading">Evidence</div>
+            <div class="xray-evidence" id="xrayEvidence"></div>
+          </div>
+        </div>
+        <div id="xrayEmpty" class="empty" style="display:none;">No request traces yet. Run traffic through the app, then refresh X-Ray.</div>
+      </div>
     </section>
 
     <section class="single-view view" id="queriesView">
@@ -1283,6 +1547,10 @@
       metrics: "dql/metrics",
       collectedQueries: "dql/collected-queries?limit=50",
       schemaSnapshot: "dql/schema-snapshot",
+      xrayTraces: "dql/xray/traces?limit=20&eventLimit=120&groupLimit=40",
+      runVets: "api/vets",
+      runNPlusOne: "dql-demo/n-plus-one",
+      runDup: "dql-demo/n-plus-one-dup",
       aiContext: "dql/ai-context",
       aiReview: "dql/ai-review"
     };
@@ -1301,6 +1569,8 @@
       metrics: null,
       collectedQueries: [],
       schemaSnapshot: null,
+      xrayTraces: [],
+      selectedTraceId: null,
       filter: "ALL",
       query: "",
       findingsPage: 1,
@@ -1435,6 +1705,136 @@
 
     function listText(values) {
       return Array.isArray(values) && values.length ? values.join(", ") : "-";
+    }
+
+    function traceTitle(trace) {
+      return trace.contextName || trace.contextId || "Unknown request";
+    }
+
+    function flagLabel(flag) {
+      return {
+        "n-plus-one-candidate": "N+1 candidate",
+        repeated: "Repeated SQL",
+        slow: "Slow query"
+      }[flag] || flag;
+    }
+
+    function flagTone(flag) {
+      if (flag === "n-plus-one-candidate" || flag === "N+1") return "risk";
+      if (flag === "repeated" || flag === "slow" || flag === "Repeated SQL" || flag === "Slow query") return "warn";
+      return "";
+    }
+
+    function flagBadges(flags, className) {
+      const values = Array.isArray(flags) ? flags : [];
+      if (!values.length) return "";
+      return values.map((flag) =>
+        `<span class="${className} ${flagTone(flag)}">${escapeHtml(flagLabel(flag))}</span>`
+      ).join("");
+    }
+
+    function selectedXrayTrace() {
+      const traces = state.xrayTraces || [];
+      if (!state.selectedTraceId && traces.length) {
+        state.selectedTraceId = traces[0].contextId;
+      }
+      return traces.find((trace) => trace.contextId === state.selectedTraceId) || traces[0] || null;
+    }
+
+    function renderXrayRequests(selected) {
+      const traces = state.xrayTraces || [];
+      const requests = $("xrayRequests");
+      $("xrayEmpty").style.display = traces.length ? "none" : "block";
+      setStatus("xrayStatus", traces.length + " traces", traces.length ? "ok" : "");
+
+      requests.innerHTML = traces.map((trace) => {
+        const active = selected && selected.contextId === trace.contextId;
+        const badges = flagBadges(trace.riskBadges || [], "xray-badge")
+          || '<span class="xray-badge">No risk badge</span>';
+        return `
+          <button class="xray-request ${active ? "active" : ""}" data-context-id="${escapeHtml(trace.contextId || "")}" type="button">
+            <div class="xray-title">${escapeHtml(traceTitle(trace))}</div>
+            <div class="xray-meta">${Number(trace.queryCount || 0)} queries | ${escapeHtml(formatMs(trace.totalSqlMs))} SQL | ${escapeHtml(formatInstant(trace.startedAt))}</div>
+            <div class="xray-badges">${badges}</div>
+          </button>
+        `;
+      }).join("");
+
+      requests.querySelectorAll(".xray-request").forEach((button) => {
+        button.addEventListener("click", () => {
+          state.selectedTraceId = button.dataset.contextId;
+          renderXray();
+        });
+      });
+    }
+
+    function renderXrayTimeline(trace) {
+      const timeline = $("xrayTimeline");
+      if (!trace) {
+        timeline.innerHTML = '<div class="empty">Select a request to inspect its SQL timeline.</div>';
+        return;
+      }
+
+      const events = Array.isArray(trace.events) ? trace.events : [];
+      const totalEvents = Number(trace.queryCount || 0);
+      const timelineNote = totalEvents > events.length
+        ? `<div class="xray-note">Showing ${events.length} of ${totalEvents} SQL events. Aggregated counts are kept in Evidence.</div>`
+        : "";
+      timeline.innerHTML = events.length ? timelineNote + events.map((event, index) => {
+        const flags = Array.isArray(event.flags) ? event.flags : [];
+        const tone = flags.includes("n-plus-one-candidate") ? "risk" : (flags.length ? "warn" : "");
+        const badges = flagBadges(flags, "xray-flag");
+        return `
+          <div class="xray-event ${tone}">
+            <div class="xray-order">${Number(event.order || index + 1)}</div>
+            <div>
+              <div class="xray-fingerprint mono" title="${escapeHtml(event.fingerprint)}">${escapeHtml(event.fingerprint || "-")}</div>
+              <div class="xray-source mono" title="${escapeHtml(event.sourceLocation)}">${escapeHtml(event.sourceLocation || "No source location")}</div>
+              ${badges ? `<div class="xray-badges">${badges}</div>` : ""}
+            </div>
+            <div class="xray-duration">${escapeHtml(formatMs(event.durationMs))}</div>
+          </div>
+        `;
+      }).join("") : '<div class="empty">This request has no captured SQL events.</div>';
+    }
+
+    function renderXrayEvidence(trace) {
+      const evidence = $("xrayEvidence");
+      if (!trace) {
+        evidence.innerHTML = '<div class="empty">Evidence will appear after a trace is selected.</div>';
+        return;
+      }
+
+      const groups = Array.isArray(trace.queryGroups) ? trace.queryGroups : [];
+      const repeatedGroups = Number(trace.repeatedGroups || 0);
+      const evidenceNote = repeatedGroups > groups.length
+        ? `<div class="xray-note">Showing top ${groups.length} groups. ${repeatedGroups} repeated groups were detected in this request.</div>`
+        : "";
+      evidence.innerHTML = groups.length ? evidenceNote + groups.map((group) => {
+        const flags = Array.isArray(group.flags) ? group.flags : [];
+        const riskClass = flags.includes("n-plus-one-candidate") ? "risk" : "";
+        const badges = flagBadges(flags, "xray-flag")
+          || '<span class="xray-flag">Observed</span>';
+        return `
+          <div class="xray-card ${riskClass}">
+            <div class="xray-card-title mono" title="${escapeHtml(group.fingerprint)}">${escapeHtml(group.fingerprint || "-")}</div>
+            <div class="xray-badges">${badges}</div>
+            <div class="xray-facts">
+              <div><span>Executions:</span> ${Number(group.count || 0)}</div>
+              <div><span>Distinct params:</span> ${Number(group.distinctParamCount || 0)}</div>
+              <div><span>Avg / total:</span> ${escapeHtml(formatMs(group.avgMs))} / ${escapeHtml(formatMs(group.totalMs))}</div>
+              <div><span>Top source:</span> <span class="mono" title="${escapeHtml(group.topSourceLocation)}">${escapeHtml(group.topSourceLocation || "-")}</span></div>
+            </div>
+          </div>
+        `;
+      }).join("") : '<div class="empty">No grouped evidence for this request.</div>';
+    }
+
+    function renderXray() {
+      const selected = selectedXrayTrace();
+      renderXrayRequests(selected);
+      renderXrayTimeline(selected);
+      renderXrayEvidence(selected);
     }
 
     function severityCounts(findings) {
@@ -1694,11 +2094,12 @@
 
     async function loadDashboard() {
       setBanner("");
-      const [reportResult, metricsResult, queriesResult, schemaResult] = await Promise.allSettled([
+      const [reportResult, metricsResult, queriesResult, schemaResult, xrayResult] = await Promise.allSettled([
         getJson(API.findings),
         getJson(API.metrics),
         getJson(API.collectedQueries),
-        getJson(API.schemaSnapshot)
+        getJson(API.schemaSnapshot),
+        getJson(API.xrayTraces)
       ]);
 
       const errors = [];
@@ -1745,7 +2146,46 @@
         errors.push(message);
       }
 
+      if (xrayResult.status === "fulfilled") {
+        state.xrayTraces = Array.isArray(xrayResult.value) ? xrayResult.value : [];
+        if (!state.xrayTraces.some((trace) => trace.contextId === state.selectedTraceId)) {
+          state.selectedTraceId = state.xrayTraces[0] ? state.xrayTraces[0].contextId : null;
+        }
+        renderXray();
+      } else {
+        const message = String(xrayResult.reason && xrayResult.reason.message ? xrayResult.reason.message : xrayResult.reason);
+        setStatus("xrayStatus", "Load error", "err");
+        errors.push(message);
+      }
+
       setBanner(errors.length ? "Some DQL data could not load: " + [...new Set(errors)].join(" | ") : "");
+    }
+
+    async function runXrayDemo(path, label) {
+      const buttons = [
+        $("xrayRunNPlusOneBtn"),
+        $("xrayRunDupBtn"),
+        $("xrayRunVetsBtn"),
+        $("xrayRefreshBtn")
+      ].filter(Boolean);
+      buttons.forEach((button) => { button.disabled = true; });
+      showToast("Running " + label + "...");
+
+      try {
+        const res = await fetch(path, { headers: { Accept: "application/json, text/plain, */*" } });
+        if (!res.ok) {
+          throw new Error(path + " returned HTTP " + res.status);
+        }
+        await res.text().catch(() => "");
+        await loadDashboard();
+        showToast(label + " captured in X-Ray");
+      } catch (error) {
+        const message = String(error && error.message ? error.message : error);
+        setBanner("Request X-Ray demo failed: " + message);
+        showToast("Demo request failed");
+      } finally {
+        buttons.forEach((button) => { button.disabled = false; });
+      }
     }
 
     function buildFallbackContext() {
@@ -1872,6 +2312,13 @@
     $("copySchemaBtn").addEventListener("click", () => {
       copyText(JSON.stringify(state.schemaSnapshot || {}, null, 2), "Schema snapshot JSON copied");
     });
+    $("openXrayBtn").addEventListener("click", () => {
+      openRaw("GET /dql/xray/traces", JSON.stringify(state.xrayTraces || [], null, 2));
+    });
+    $("xrayRefreshBtn").addEventListener("click", loadDashboard);
+    $("xrayRunNPlusOneBtn").addEventListener("click", () => runXrayDemo(API.runNPlusOne, "N+1 demo"));
+    $("xrayRunDupBtn").addEventListener("click", () => runXrayDemo(API.runDup, "duplicate demo"));
+    $("xrayRunVetsBtn").addEventListener("click", () => runXrayDemo(API.runVets, "/api/vets"));
     $("copyRawBtn").addEventListener("click", () => copyText($("rawText").value, "Copied"));
     $("closeRawBtn").addEventListener("click", () => $("rawModal").close());
     $("copyReviewBtn").addEventListener("click", () => copyText(state.reviewRaw || $("reviewBox").textContent, "AI review copied"));

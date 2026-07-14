@@ -11,6 +11,7 @@ import org.example.fingerprint.SqlVerbs;
 import org.example.model.QueryContext;
 import org.example.model.QueryExecution;
 import org.example.model.QueryParam;
+import org.example.runtime.DqlRuntimeControl;
 import org.example.storage.ExecutionSink;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.ObjectProvider;
@@ -26,15 +27,18 @@ public class DqlBeanPostProcessor implements BeanPostProcessor {
 
     private final Fingerprinter fingerprinter;
     private final SourceLocationConfig sourceLocationConfig;
+    private final DqlRuntimeControl runtimeControl;
 
     public DqlBeanPostProcessor(
             ObjectProvider<ExecutionSink> sinkObjectProvider,
             Fingerprinter fingerprinter,
-            SourceLocationConfig sourceLocationConfig
+            SourceLocationConfig sourceLocationConfig,
+            DqlRuntimeControl runtimeControl
     ) {
         this.sinkObjectProvider = sinkObjectProvider;
         this.fingerprinter = fingerprinter;
         this.sourceLocationConfig = sourceLocationConfig;
+        this.runtimeControl = runtimeControl;
     }
 
     @Override
@@ -42,10 +46,15 @@ public class DqlBeanPostProcessor implements BeanPostProcessor {
         if(bean instanceof DataSource dataSource && !(bean instanceof ProxyDataSource)) {
             return ProxyDataSourceBuilder.create(dataSource)
                     .afterQuery((execInfo, queryInfoList) -> {
+                        if (!runtimeControl.isEnabled()) {
+                            return;
+                        }
+
                         ExecutionSink sink = sinkObjectProvider.getObject();
                         QueryContext context = ThreadLocalContextProvider.current();
 
                         String contextId = context != null ? context.id() : null;
+                        String contextName = context != null ? context.name() : null;
                         String sourceLocation = null;
                         boolean sourceLocationResolved = false;
                         for(QueryInfo queryInfo : queryInfoList) {
@@ -68,6 +77,7 @@ public class DqlBeanPostProcessor implements BeanPostProcessor {
                                     duration,
                                     Instant.now(),
                                     contextId,
+                                    contextName,
                                     fingerprint,
                                     isSelect,
                                     paramSets,

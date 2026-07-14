@@ -11,6 +11,7 @@ import org.example.model.QueryStats;
 import org.example.model.SchemaSnapshot;
 import org.example.report.AiContextExporter;
 import org.example.report.JsonReporter;
+import org.example.runtime.DqlRuntimeControl;
 import org.example.rules.AnalysisContext;
 import org.example.schema.SchemaSnapshotProvider;
 import org.example.storage.ExecutionSink;
@@ -32,6 +33,7 @@ public class DqlAnalysisScheduler {
     private final RuleEngine ruleEngine;
     private final JsonReporter jsonReporter;
     private final AiContextExporter aiContextExporter;
+    private final DqlRuntimeControl runtimeControl;
     private final long delaySeconds;
 
     private final ScheduledExecutorService executor =
@@ -54,6 +56,7 @@ public class DqlAnalysisScheduler {
             RuleEngine ruleEngine,
             JsonReporter jsonReporter,
             AiContextExporter aiContextExporter,
+            DqlRuntimeControl runtimeControl,
             long delaySeconds
     ) {
         if (delaySeconds <= 0) {
@@ -65,6 +68,7 @@ public class DqlAnalysisScheduler {
         this.ruleEngine = ruleEngine;
         this.jsonReporter = jsonReporter;
         this.aiContextExporter = aiContextExporter;
+        this.runtimeControl = runtimeControl;
         this.delaySeconds = delaySeconds;
     }
 
@@ -89,6 +93,10 @@ public class DqlAnalysisScheduler {
     }
 
     private void analyzeIfNeeded() throws Exception {
+        if (!runtimeControl.isEnabled()) {
+            return;
+        }
+
         long currentSeq = executionSink.currentSeq();
         if (lastRun != null && currentSeq == lastProcessedSeq) {
             return;

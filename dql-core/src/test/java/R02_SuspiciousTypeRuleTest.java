@@ -35,6 +35,16 @@ class R02_SuspiciousTypeRuleTest {
     }
 
     @Test
+    void monetary_sql_server_float_is_critical() {
+        List<Finding> findings = new R02_SuspiciousTypeRule().analyze(ctxWithColumn("amount", "float"));
+
+        assertEquals(1, findings.size());
+        assertEquals(R02_SuspiciousTypeRule.ID, findings.getFirst().ruleId());
+        assertEquals(Severity.CRITICAL, findings.getFirst().severity());
+        assertEquals("amount", findings.getFirst().column());
+    }
+
+    @Test
     void temporal_varchar_fires_high() {
         List<Finding> findings = new R02_SuspiciousTypeRule().analyze(ctxWithColumn("created_at", "varchar"));
 

@@ -41,6 +41,22 @@ class InMemoryExecutionSinkTest {
     }
 
     @Test
+    void recent_executions_are_returned_in_write_order_after_ring_wraps() {
+        InMemoryExecutionSink sink = new InMemoryExecutionSink(
+                3, fingerprinter, 1000, SlowQueryConfig.defaults());
+
+        for (int i = 0; i < 5; i++) {
+            sink.accept(exec("select * from t where id = " + i));
+        }
+
+        List<QueryExecution> recent = sink.recentExecutions();
+
+        assertEquals("select * from t where id = 2", recent.get(0).sqlRaw());
+        assertEquals("select * from t where id = 3", recent.get(1).sqlRaw());
+        assertEquals("select * from t where id = 4", recent.get(2).sqlRaw());
+    }
+
+    @Test
     void stats_are_capped_by_max_fingerprints_and_skip_counted() {
         InMemoryExecutionSink sink = new InMemoryExecutionSink(
                 1000, fingerprinter, 2, SlowQueryConfig.defaults());

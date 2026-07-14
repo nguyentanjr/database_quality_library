@@ -92,9 +92,15 @@ public class InMemoryExecutionSink implements ExecutionSink{
 
     public List<QueryExecution> recentExecutions() {
         List<QueryExecution> result = new ArrayList<>();
-        for(QueryExecution query : ring) {
-            if(query != null)
-            result.add(query);
+        long currentSeq = seq.get();
+        long retained = Math.min(currentSeq, ringCapacity);
+        long startSeq = currentSeq - retained;
+
+        for (long i = startSeq; i < currentSeq; i++) {
+            QueryExecution query = ring[(int) (i % ringCapacity)];
+            if (query != null) {
+                result.add(query);
+            }
         }
         return result;
     }

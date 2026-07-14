@@ -12,6 +12,7 @@ import org.example.callsite.SourceLocationConfig;
 import org.example.config.DqlProperties;
 import org.example.config.WebConfig;
 import org.example.controller.AiReviewController;
+import org.example.controller.DqlAdminController;
 import org.example.controller.DqlReportController;
 import org.example.controller.DqlTransparencyController;
 import org.example.controller.MetricController;
@@ -20,6 +21,7 @@ import org.example.fingerprint.Fingerprinter;
 import org.example.fingerprint.RegexFingerprint;
 import org.example.report.AiContextExporter;
 import org.example.report.JsonReporter;
+import org.example.runtime.DqlRuntimeControl;
 import org.example.rules.Rule;
 import org.example.rules.config.FullScanConfig;
 import org.example.rules.config.MissingIndexConfig;
@@ -70,6 +72,12 @@ import java.util.stream.Collectors;
         matchIfMissing = true
 )
 public class DqlAutoConfiguration {
+
+    @Bean
+    @ConditionalOnMissingBean
+    public DqlRuntimeControl dqlRuntimeControl() {
+        return new DqlRuntimeControl();
+    }
 
     @Bean
     @ConditionalOnMissingBean
@@ -124,7 +132,8 @@ public class DqlAutoConfiguration {
     public static DqlBeanPostProcessor dqlBeanPostProcessor(
             ObjectProvider<ExecutionSink> sinks,
             Fingerprinter fingerprinter,
-            DqlProperties properties
+            DqlProperties properties,
+            DqlRuntimeControl runtimeControl
     ) {
         DqlProperties.SourceLocation sourceLocation = properties.getSourceLocation();
         return new DqlBeanPostProcessor(
@@ -135,7 +144,8 @@ public class DqlAutoConfiguration {
                         sourceLocation.getApplicationPrefixes(),
                         sourceLocation.getExtraInternalPrefixes(),
                         sourceLocation.getMaxDepth()
-                )
+                ),
+                runtimeControl
         );
     }
 
@@ -253,6 +263,7 @@ public class DqlAutoConfiguration {
             RuleEngine ruleEngine,
             JsonReporter jsonReporter,
             AiContextExporter aiContextExporter,
+            DqlRuntimeControl runtimeControl,
             DqlProperties properties
     ) {
         return new DqlAnalysisScheduler(
@@ -261,6 +272,7 @@ public class DqlAutoConfiguration {
                 ruleEngine,
                 jsonReporter,
                 aiContextExporter,
+                runtimeControl,
                 properties.getAnalysis().getDelaySeconds()
         );
     }
@@ -308,9 +320,23 @@ public class DqlAutoConfiguration {
     )
     public DqlTransparencyController dqlTransparencyController(
             ExecutionSink executionSink,
-            SchemaSnapshotProvider schemaSnapshotProvider
+            SchemaSnapshotProvider schemaSnapshotProvider,
+            DqlProperties properties
     ) {
-        return new DqlTransparencyController(executionSink, schemaSnapshotProvider);
+        return new DqlTransparencyController(executionSink, schemaSnapshotProvider, properties);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    @ConditionalOnProperty(
+            prefix = "dql.endpoints",
+            name = "enabled",
+            havingValue = "true",
+            matchIfMissing = true
+    )
+    public DqlAdminController dqlAdminController(DqlRuntimeControl runtimeControl) {
+        return new DqlAdminController(runtimeControl);
     }
 
 

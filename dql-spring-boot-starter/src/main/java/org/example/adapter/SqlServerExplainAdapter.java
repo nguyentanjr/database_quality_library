@@ -14,7 +14,6 @@ import javax.sql.DataSource;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.StringReader;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -23,6 +22,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.StringJoiner;
 import java.util.regex.Pattern;
 
 public class SqlServerExplainAdapter implements ExplainAdapter {
@@ -52,11 +52,18 @@ public class SqlServerExplainAdapter implements ExplainAdapter {
             conn.setReadOnly(true);
             enableShowplan(conn);
 
-            try (PreparedStatement ps = conn.prepareStatement(rawSql)) {
-                ps.setQueryTimeout(3);
-                bindParams(ps, execution);
+            try (Statement statement = conn.createStatement()) {
+                statement.setQueryTimeout(3);
+                String showplanSql = materializeSqlForShowplan(rawSql, execution);
 
-                try (ResultSet rs = ps.executeQuery()) {
+                if (!statement.execute(showplanSql)) {
+                    return Optional.empty();
+                }
+
+                try (ResultSet rs = statement.getResultSet()) {
+                    if (rs == null) {
+                        return Optional.empty();
+                    }
                     List<ExplainResult> fullScans = new ArrayList<>();
                     while (rs.next()) {
                         collectFullScans(rs.getString(1), fullScans);
@@ -70,6 +77,57 @@ public class SqlServerExplainAdapter implements ExplainAdapter {
                 disableShowplan(conn);
             }
         }
+    }
+
+    private String materializeSqlForShowplan(String sql, QueryExecution execution) {
+        List<List<QueryParam>> paramSets = execution.paramSets();
+        if (paramSets == null || paramSets.isEmpty() || paramSets.get(0).isEmpty()) {
+            return sql;
+        }
+
+        StringJoiner literals = new StringJoiner("\u0000");
+        paramSets.get(0).stream()
+                .sorted(Comparator.comparingInt(QueryParam::index))
+                .map(param -> sqlLiteral(param.value()))
+                .forEach(literals::add);
+
+        String[] values = literals.toString().split("\u0000", -1);
+        StringBuilder out = new StringBuilder(sql.length() + values.length * 8);
+        boolean inString = false;
+        int paramIndex = 0;
+
+        for (int i = 0; i < sql.length(); i++) {
+            char c = sql.charAt(i);
+            if (c == '\'') {
+                out.append(c);
+                if (inString && i + 1 < sql.length() && sql.charAt(i + 1) == '\'') {
+                    out.append(sql.charAt(++i));
+                } else {
+                    inString = !inString;
+                }
+                continue;
+            }
+
+            if (c == '?' && !inString && paramIndex < values.length) {
+                out.append(values[paramIndex++]);
+            } else {
+                out.append(c);
+            }
+        }
+        return out.toString();
+    }
+
+    private String sqlLiteral(Object value) {
+        if (value == null) {
+            return "NULL";
+        }
+        if (value instanceof Number) {
+            return value.toString();
+        }
+        if (value instanceof Boolean bool) {
+            return bool ? "1" : "0";
+        }
+        return "'" + value.toString().replace("'", "''") + "'";
     }
 
     private boolean isSafeSelect(String sql) {
@@ -189,17 +247,4 @@ public class SqlServerExplainAdapter implements ExplainAdapter {
         }
     }
 
-    private void bindParams(PreparedStatement ps, QueryExecution execution) throws SQLException {
-        List<List<QueryParam>> paramSets = execution.paramSets();
-
-        if (paramSets == null || paramSets.isEmpty()) {
-            return;
-        }
-
-        List<QueryParam> params = paramSets.get(0);
-
-        for (QueryParam param : params) {
-            ps.setObject(param.index(), param.value());
-        }
-    }
 }

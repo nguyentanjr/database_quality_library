@@ -8,9 +8,7 @@ import javax.sql.DataSource;
 import java.io.PrintWriter;
 import java.lang.reflect.Proxy;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Instant;
 import java.util.List;
@@ -81,7 +79,6 @@ class SqlServerExplainAdapterPlanParsingTest {
                     new Class<?>[]{Connection.class},
                     (proxy, method, args) -> switch (method.getName()) {
                         case "createStatement" -> statement();
-                        case "prepareStatement" -> preparedStatement(xml);
                         case "setReadOnly", "close" -> null;
                         case "isClosed" -> false;
                         default -> defaultValue(method.getReturnType());
@@ -135,19 +132,9 @@ class SqlServerExplainAdapterPlanParsingTest {
                     new Class<?>[]{Statement.class},
                     (proxy, method, args) -> switch (method.getName()) {
                         case "execute" -> true;
+                        case "getResultSet" -> resultSet(xml);
+                        case "setQueryTimeout" -> null;
                         case "close" -> null;
-                        default -> defaultValue(method.getReturnType());
-                    }
-            );
-        }
-
-        private PreparedStatement preparedStatement(String xml) {
-            return (PreparedStatement) Proxy.newProxyInstance(
-                    getClass().getClassLoader(),
-                    new Class<?>[]{PreparedStatement.class},
-                    (proxy, method, args) -> switch (method.getName()) {
-                        case "executeQuery" -> resultSet(xml);
-                        case "setQueryTimeout", "setObject", "close" -> null;
                         default -> defaultValue(method.getReturnType());
                     }
             );

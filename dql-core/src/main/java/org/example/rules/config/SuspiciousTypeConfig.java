@@ -21,7 +21,7 @@ public record SuspiciousTypeConfig(List<TypeRule> rules) {
         return new SuspiciousTypeConfig(List.of(
                 new TypeRule(
                         List.of("amount", "price", "balance", "cost", "fee", "total"),
-                        Set.of("float8", "float4", "double", "real"),
+                        Set.of("float8", "float4", "float", "double", "real"),
                         Severity.CRITICAL,
                         "Monetary column uses floating-point type",
                         "Use NUMERIC or DECIMAL for monetary values"
