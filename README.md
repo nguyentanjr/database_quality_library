@@ -215,21 +215,6 @@ curl.exe http://localhost:8080/dql/findings
 curl.exe http://localhost:8080/dql/metrics
 ```
 
-Schema demo (`init.sql`) cố ý chứa anti-pattern cho từng rule — xem comment trong file để hiểu từng case.
-
-## Demo PetClinic (tích hợp thực tế)
-
-Ứng dụng Spring PetClinic REST là testbed chính để chứng minh DQL tích hợp vào app production-like mà không sửa business code:
-
-```powershell
-mvn -N install
-mvn -pl dql-core,dql-spring-boot-starter install -DskipTests
-docker compose -f spring-petclinic-rest/docker-compose.yml --profile postgres up -d
-mvn -pl spring-petclinic-rest spring-boot:run "-Dspring-boot.run.arguments=--dql.ai.enabled=false"
-```
-
-Chi tiết kịch bản demo 10 bước: [`docs/demo-flow.md`](docs/demo-flow.md).
-
 ## Chạy tests
 
 ```powershell
@@ -265,26 +250,3 @@ mvn -pl dql-core test -Dtest=RuleEngineBenchmark
 
 - **Hot-path** (mỗi query): chỉ ghi vào ring buffer — không chạy rule, không EXPLAIN
 - **Cold-path** (scheduler): chạy toàn bộ rule engine + EXPLAIN (R10) ngoài request thread
-
-## Tài liệu bổ sung
-
-| Tài liệu | Nội dung |
-|----------|----------|
-| [`docs/architecture-deep-dive.md`](docs/architecture-deep-dive.md) | Kiến trúc chi tiết, data flow |
-| [`docs/demo-flow.md`](docs/demo-flow.md) | Kịch bản demo PetClinic |
-| [`docs/limitations.md`](docs/limitations.md) | Hạn chế và giả định thiết kế |
-| [`docs/benchmark-analysis.md`](docs/benchmark-analysis.md) | Kết quả benchmark analysis time |
-| [`docs/test-matrix.md`](docs/test-matrix.md) | Ma trận verify 10 rule |
-
-## Hạn chế đã biết
-
-- Rule dựa trên **heuristic** — không thay thế DBA review thủ công
-- R09 (N+1) cần `contextId` từ servlet interceptor — Plain Java phải gọi `beginUnitOfWork()` thủ công
-- R10 (Full Scan) cache EXPLAIN — giả định schema tĩnh trong một chu kỳ phân tích
-- Ring buffer bounded — workload rất lớn có thể mất execution cũ
-
-Xem đầy đủ tại [`docs/limitations.md`](docs/limitations.md).
-
-## License
-
-Dự án nội bộ — phiên bản `0.1.0-SNAPSHOT`.
